@@ -6,6 +6,8 @@ import { ImageCard } from '../components/ImageCard';
 import { useNews } from '../context/NewsContext';
 import { useSettings } from '../context/SettingsContext';
 
+const CACHE_KEY = 'buzz_page_cache';
+
 /**
  * Tech & Social Page
  * Social Trends Distribution:
@@ -15,13 +17,39 @@ import { useSettings } from '../context/SettingsContext';
  * - 20% Muscat/Local
  */
 function TechSocialPage() {
-    const { newsData, refreshNews, loading, loadSection } = useNews();
+    const { newsData, refreshNews, loading: contextLoading, loadSection } = useNews();
     const { settings } = useSettings();
     const [activeEntTab, setActiveEntTab] = useState('tamil');
 
+    // Local cache state for immediate loading
+    const [cachedData, setCachedData] = useState(null);
+    const [loadingPhase, setLoadingPhase] = useState(0); // 0: Init, 1: Local, 3: Live
+
+    // Load Cache on Mount
+    useEffect(() => {
+        try {
+            const cached = localStorage.getItem(CACHE_KEY);
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                // Check age (8 hours)
+                const age = Date.now() - (parsed.timestamp || 0);
+                if (age < 8 * 60 * 60 * 1000) {
+                     setCachedData(parsed);
+                     setLoadingPhase(1);
+                } else {
+                     console.log('[Buzz] Cache expired, showing anyway until live loads');
+                     setCachedData(parsed);
+                     setLoadingPhase(1);
+                }
+            }
+        } catch (e) {
+            console.warn('Buzz Cache read error', e);
+        }
+    }, []);
+
     // Trigger lazy load for sections required by this page
     useEffect(() => {
-        const requiredSections = ['entertainment', 'social', 'technology', 'local'];
+        const requiredSections = ['entertainment', 'social', 'technology', 'local', 'world', 'india', 'chennai'];
         requiredSections.forEach(section => loadSection(section));
     }, [loadSection]);
 
@@ -32,11 +60,23 @@ function TechSocialPage() {
         return newsArray.filter(item => (now - (item.publishedAt || 0)) < limitMs);
     }, [settings.freshnessLimitHours]);
 
+    // Determine which data to use (Live > Cache)
+    // We prefer Live if available, else Cache
+    const hasLiveData = newsData.entertainment && newsData.entertainment.length > 0;
+
+    useEffect(() => {
+        if (hasLiveData) {
+            setLoadingPhase(3);
+        }
+    }, [hasLiveData]);
+
+    const displayData = hasLiveData ? newsData : (cachedData?.data || {});
+
     // ============================================
     // ENTERTAINMENT CONTENT FILTERING
     // ============================================
     const processedEntertainment = useMemo(() => {
-        const raw = newsData.entertainment || [];
+        const raw = displayData.entertainment || [];
 
         const KEYWORDS = {
             tamil: [
@@ -76,11 +116,10 @@ function TechSocialPage() {
             // Fallback to existing region if no specific keyword found
             return item;
         });
-    }, [newsData.entertainment]);
+    }, [displayData.entertainment]);
 
     // ============================================
     // SOCIAL TRENDS DISTRIBUTION LOGIC
-    // 30% World, 30% India, 20% TN, 20% Muscat
     // ============================================
 
     const socialTrends = useMemo(() => {
@@ -99,31 +138,18 @@ function TechSocialPage() {
         // Categorize social news by region
         const categorizeByRegion = (newsItem) => {
             const text = (newsItem.title + ' ' + (newsItem.summary || '')).toLowerCase();
-
-            // Check Tamil Nadu first (most specific)
-            if (REGION_KEYWORDS.tamilnadu.some(kw => text.includes(kw))) {
-                return 'tamilnadu';
-            }
-            // Check Muscat/Oman
-            if (REGION_KEYWORDS.muscat.some(kw => text.includes(kw))) {
-                return 'muscat';
-            }
-            // Check India
-            if (REGION_KEYWORDS.india.some(kw => text.includes(kw))) {
-                return 'india';
-            }
-            // Default to World
+            if (REGION_KEYWORDS.tamilnadu.some(kw => text.includes(kw))) return 'tamilnadu';
+            if (REGION_KEYWORDS.muscat.some(kw => text.includes(kw))) return 'muscat';
+            if (REGION_KEYWORDS.india.some(kw => text.includes(kw))) return 'india';
             return 'world';
         };
 
         // Get all social news
-        const allSocial = filterOldNews(newsData.social || []);
-
-        // Also pull from world, india, chennai sections for social trends
-        const worldNews = filterOldNews(newsData.world || []);
-        const indiaNews = filterOldNews(newsData.india || []);
-        const chennaiNews = filterOldNews(newsData.chennai || []);
-        const localNews = filterOldNews(newsData.local || []); // Muscat/Oman
+        const allSocial = filterOldNews(displayData.social || []);
+        const worldNews = filterOldNews(displayData.world || []);
+        const indiaNews = filterOldNews(displayData.india || []);
+        const chennaiNews = filterOldNews(displayData.chennai || []);
+        const localNews = filterOldNews(displayData.local || []); // Muscat/Oman
 
         // Categorize all news
         const regionBuckets = {
@@ -197,9 +223,33 @@ function TechSocialPage() {
         result.sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
 
         return result;
-    }, [newsData, settings.freshnessLimitHours, settings.socialTrends, filterOldNews, settings.sections?.social?.count]);
+    }, [displayData, settings.freshnessLimitHours, settings.socialTrends, filterOldNews]);
+
+    // Save to Cache when Live Data updates
+    useEffect(() => {
+        if (hasLiveData) {
+            try {
+                const cachePayload = {
+                    timestamp: Date.now(),
+                    data: {
+                        entertainment: newsData.entertainment,
+                        social: newsData.social,
+                        technology: newsData.technology,
+                        world: newsData.world,
+                        india: newsData.india,
+                        chennai: newsData.chennai,
+                        local: newsData.local
+                    }
+                };
+                localStorage.setItem(CACHE_KEY, JSON.stringify(cachePayload));
+            } catch (e) {
+                console.warn('Buzz Cache write error', e);
+            }
+        }
+    }, [hasLiveData, newsData]);
 
     const handleRefresh = () => {
+        setLoadingPhase(3); // Show loading
         refreshNews(['technology', 'social', 'world', 'india', 'chennai', 'local']);
     };
 
@@ -235,7 +285,7 @@ function TechSocialPage() {
                 title="Buzz Hub"
                 icon="🎭"
                 onRefresh={handleRefresh}
-                loading={loading}
+                loadingPhase={loadingPhase || (contextLoading ? 3 : 0)}
             />
             <main className="main-content">
 
@@ -332,7 +382,7 @@ function TechSocialPage() {
                     title="Tech & Startups"
                     icon="🚀"
                     colorClass="news-section__title--world"
-                    news={filterOldNews(newsData.technology)}
+                    news={filterOldNews(displayData.technology)}
                     maxDisplay={settings.sections?.technology?.count || 5} // Dynamic
                     showCritics={false}
                 />
@@ -343,7 +393,7 @@ function TechSocialPage() {
                     title="AI & Innovation"
                     icon="🤖"
                     colorClass="news-section__title--entertainment"
-                    news={filterOldNews(newsData.technology?.filter(
+                    news={filterOldNews(displayData.technology?.filter(
                         item => item.title?.toLowerCase().includes('ai') ||
                             item.title?.toLowerCase().includes('innovation') ||
                             item.title?.toLowerCase().includes('machine learning') ||

@@ -9,7 +9,7 @@ import TimelineHeader from '../components/TimelineHeader';
 import QuickWeather from '../components/QuickWeather';
 import { NewspaperLayout } from '../components/NewspaperLayout';
 import { getTopline } from '../utils/timeSegment';
-import { generateTopline } from '../utils/toplineGenerator';
+import { generateTopline, fetchOnThisDay } from '../utils/toplineGenerator';
 import { getTimeSinceRefresh, getViewCount, isArticleRead } from '../utils/storage';
 import { useWeather } from '../context/WeatherContext';
 import { useNews } from '../context/NewsContext';
@@ -25,6 +25,7 @@ const MainPage = () => {
     const { currentSegment } = useSegment();
     const [notifPermission, setNotifPermission] = useState(Notification.permission);
     const [toplineContent, setToplineContent] = useState(null);
+    const [onThisDay, setOnThisDay] = useState(null);
 
     // Responsive Detection
     const { isWebView, isDesktop } = useMediaQuery();
@@ -80,12 +81,19 @@ const MainPage = () => {
         refreshNews();
     }, [currentSegment.id, refreshNews, refreshWeather]);
 
+    // Fetch On This Day
+    useEffect(() => {
+        fetchOnThisDay().then(event => {
+            if (event) setOnThisDay(event);
+        });
+    }, []);
+
     // Generate Topline when data is ready
     useEffect(() => {
         if (!loading && !weatherLoading) {
-            setToplineContent(generateTopline(newsData, weatherData));
+            setToplineContent(generateTopline(newsData, weatherData, onThisDay));
         }
-    }, [loading, weatherLoading, newsData, weatherData]);
+    }, [loading, weatherLoading, newsData, weatherData, onThisDay]);
 
     const handleRequestPermission = async () => {
         const granted = await requestNotificationPermission();
@@ -155,6 +163,7 @@ const MainPage = () => {
 
     // Determine loading state
     const isLoading = (weatherLoading && !weatherData) || (loading && Object.keys(newsData).length === 0);
+    const loadingPhase = isLoading ? 1 : 3;
 
     const isTimelineMode = uiMode === 'timeline';
     const isNewspaperMode = uiMode === 'newspaper';
@@ -183,12 +192,14 @@ const MainPage = () => {
                     title={currentSegment.id === 'market_brief' ? '' : currentSegment.label}
                     icon={currentSegment.icon}
                     actions={headerActions}
+                    loadingPhase={loadingPhase}
                 />
             ) : (
                 <Header
                     title={currentSegment.label}
                     icon={currentSegment.icon}
                     actions={headerActions}
+                    loadingPhase={loadingPhase}
                 />
             )}
 

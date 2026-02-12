@@ -7,6 +7,7 @@ import NewspaperCard from '../components/NewspaperCard';
 import { geminiService } from '../services/geminiService';
 import { extractArticleText } from '../utils/articleExtractor';
 import { summarizeText } from '../utils/extractiveSummary';
+import { proxyManager } from '../services/proxyManager';
 import '../components/NewspaperLayout.css';
 
 const DATA_URL = '/News-Weather-App/data/epaper_data.json';
@@ -16,6 +17,26 @@ const SOURCES = {
   INDIAN_EXPRESS: { id: 'INDIAN_EXPRESS', label: 'Indian Express', lang: 'en' },
   DINAMANI: { id: 'DINAMANI', label: 'Dinamani', lang: 'ta' },
   DAILY_THANTHI: { id: 'DAILY_THANTHI', label: 'Daily Thanthi', lang: 'ta' }
+};
+
+const FALLBACK_FEEDS = {
+    THE_HINDU: [
+        { page: 'Front Page', url: 'https://www.thehindu.com/news/national/feeder/default.rss' },
+        { page: 'Business', url: 'https://www.thehindu.com/business/feeder/default.rss' },
+        { page: 'Sport', url: 'https://www.thehindu.com/sport/feeder/default.rss' }
+    ],
+    INDIAN_EXPRESS: [
+        { page: 'Front Page', url: 'https://indianexpress.com/feed/' },
+        { page: 'Explained', url: 'https://indianexpress.com/section/explained/feed/' }
+    ],
+    DINAMANI: [
+        // Using Google News RSS for Dinamani as reliable fallback
+        { page: 'Latest', url: 'https://news.google.com/rss/search?q=site:dinamani.com&hl=ta&gl=IN&ceid=IN:ta' }
+    ],
+    DAILY_THANTHI: [
+        // Using Google News RSS for Daily Thanthi
+        { page: 'Latest', url: 'https://news.google.com/rss/search?q=site:dailythanthi.com&hl=ta&gl=IN&ceid=IN:ta' }
+    ]
 };
 
 const NewspaperPage = () => {
@@ -41,27 +62,75 @@ const NewspaperPage = () => {
 
     const summaryLineLimit = settings.newspaper?.summaryLineLimit || 50;
 
-    // Fetch Data
-    const fetchData = async () => {
+    // Fetch Data with Fallback
+    const fetchData = useCallback(async () => {
         setLoading(true);
         setError(null);
+
+        // Try Static JSON first
         try {
             const response = await fetch(`${DATA_URL}?t=${Date.now()}`);
             if (!response.ok) throw new Error('Failed to fetch data');
             const json = await response.json();
+            if (!json || !json.sources) throw new Error('Invalid data format');
+
             setData(json.sources);
             setLastUpdated(json.lastUpdated);
         } catch (err) {
-            console.error(err);
-            setError("Failed to load today's paper. Please check your internet connection.");
+            console.warn("JSON fetch failed, trying RSS fallback...", err);
+
+            // Try RSS Fallback
+            try {
+                const fallbackData = await fetchFallbackRSS();
+                setData(fallbackData);
+                setLastUpdated(new Date().toISOString());
+                // Don't set error if fallback succeeds
+            } catch (fallbackErr) {
+                console.error("Fallback failed:", fallbackErr);
+                setError("Failed to load today's paper. Please check your internet connection.");
+            }
         } finally {
             setLoading(false);
         }
+    }, []);
+
+    const fetchFallbackRSS = async () => {
+        const sources = {};
+        const fetchPromises = Object.keys(SOURCES).map(async (sourceKey) => {
+            const feeds = FALLBACK_FEEDS[sourceKey];
+            if (!feeds) return;
+
+            const sections = [];
+            for (const feed of feeds) {
+                try {
+                    const rssData = await proxyManager.fetchViaProxy(feed.url);
+                    if (rssData && rssData.items) {
+                        sections.push({
+                            page: feed.page,
+                            articles: rssData.items.slice(0, 15).map(item => ({
+                                title: item.title,
+                                link: item.link
+                            }))
+                        });
+                    }
+                } catch (e) {
+                    console.warn(`Fallback RSS failed for ${sourceKey}: ${feed.url}`, e.message);
+                }
+            }
+            if (sections.length > 0) {
+                sources[sourceKey] = sections;
+            }
+        });
+
+        await Promise.all(fetchPromises);
+
+        if (Object.keys(sources).length === 0) throw new Error("All fallbacks failed");
+        return sources;
     };
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [fetchData]);
 
     // Effect: Handle Dynamic Summary Generation (Fallback)
     useEffect(() => {
@@ -204,14 +273,6 @@ const NewspaperPage = () => {
             return { text: clientSummaries[clientKey], method: 'extractive' };
         }
 
-        // 4. Trigger client-side extraction if nothing available
-        // Note: Auto-triggering side effects in render is discouraged.
-        // We rely on the "Generate All" button or the useEffect below for bulk actions.
-        if (!section.error || section.error === 'API Key Missing') {
-             // Optional: Uncomment to auto-trigger one by one on render (legacy behavior)
-             // generateClientSummary(section.page, section.articles);
-        }
-
         return null;
     };
 
@@ -233,7 +294,6 @@ const NewspaperPage = () => {
 
             // Strategy: Try Gemini if Key exists, else Client Extractive
             if (settings.geminiKey) {
-                // Double check state inside async (though stale closure might be an issue, ref is better, but this is okay for now)
                 try {
                     const result = await geminiService.generateSummary(section.articles, settings.geminiKey, SOURCES[activeSource].lang === 'ta');
                     setDynamicSummaries(prev => ({ ...prev, [section.page]: result }));

@@ -5,7 +5,7 @@ import MarketTicker from './MarketTicker';
  * Timeline Header
  * Displays the Current Segment info as the title.
  */
-const TimelineHeader = ({ title, icon, actions }) => {
+const TimelineHeader = ({ title, icon, actions, loadingPhase }) => {
     // User requested to remove "Market Brief" text when ticker is present
     const showTitle = title !== 'Market Brief';
 
@@ -17,7 +17,7 @@ const TimelineHeader = ({ title, icon, actions }) => {
                 </h1>
             )}
 
-            <MarketTicker />
+            <MarketTicker loadingPhase={loadingPhase} />
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {actions}

@@ -1,99 +1,123 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import Header from '../components/Header';
 import { useWatchlist } from '../hooks/useWatchlist';
 import { downloadCalendarEvent } from '../utils/calendar';
-import { fetchUpAheadData, fetchStaticUpAheadData } from '../services/upAheadService';
+import {
+    fetchStaticUpAheadData,
+    fetchLiveUpAheadData,
+    mergeUpAheadData,
+    loadFromCache,
+    saveToCache
+} from '../services/upAheadService';
 import plannerStorage from '../utils/plannerStorage';
 import { useSettings } from '../context/SettingsContext';
 import './UpAhead.css';
 
-const CACHE_KEY = 'upAhead_data';
-
 function UpAheadPage() {
     const { settings } = useSettings();
 
-    // Initialize data from memory (Server/Network First)
+    // Data state
     const [data, setData] = useState(null);
 
-    // Loading state: true initially
+    // Loading state
     const [loading, setLoading] = useState(true);
-
-    // Background refresh state
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [loadingPhase, setLoadingPhase] = useState(0); // 0: Init, 1: Local, 2: Static, 3: Live
 
-    // View state: 'plan', 'offers', 'movies', 'events', 'festivals', 'alerts', 'feed'
+    // View state
     const [view, setView] = useState('plan');
 
-    // Blacklist state to trigger re-renders
+    // Blacklist state
     const [, setBlacklist] = useState(plannerStorage.getBlacklist ? plannerStorage.getBlacklist() : new Set());
 
     const { toggleWatchlist, isWatched } = useWatchlist();
-    const hasFetched = useRef(false);
 
-    // Reload data when blacklist changes to re-generate the weekly plan
+    const loadData = useCallback(async (forceRefresh = false) => {
+        // If force refresh, reset phases slightly or just ensure we do fetch live
+        if (forceRefresh) {
+            setIsRefreshing(true);
+            setLoadingPhase(1); // Reset to indicate working
+        } else {
+             setLoading(true);
+             setLoadingPhase(0);
+        }
+
+        // PHASE 1: Local Cache (Immediate)
+        // Only load cache if we are starting fresh (not a manual refresh)
+        if (!forceRefresh) {
+            const cached = loadFromCache();
+            if (cached) {
+                setData(cached);
+                setLoading(false); // Show content immediately
+                setLoadingPhase(1);
+            }
+        }
+
+        // PHASE 2: Static Data (Fast)
+        // Always fetch static to get base events
+        try {
+            const staticData = await fetchStaticUpAheadData();
+            if (staticData) {
+                setData(prev => {
+                    const merged = mergeUpAheadData(prev, staticData);
+                    return merged;
+                });
+                if (!forceRefresh) setLoadingPhase(2);
+                setLoading(false);
+            }
+        } catch (e) {
+            console.warn("Static fetch failed", e);
+        }
+
+        // PHASE 3: Live Data (Background)
+        // Use settings to fetch live
+        setIsRefreshing(true);
+        try {
+            const upAheadSettings = settings.upAhead || {
+                categories: { movies: true, events: true, festivals: true, alerts: true, sports: true, shopping: true, civic: true, weather_alerts: true, airlines: true },
+                locations: ['Chennai']
+            };
+
+            const liveData = await fetchLiveUpAheadData(upAheadSettings);
+
+            setData(prev => {
+                const merged = mergeUpAheadData(prev, liveData);
+                // Save complete dataset to cache
+                saveToCache(merged);
+                return merged;
+            });
+            setLoadingPhase(3);
+        } catch (err) {
+            console.error("Failed to load Live Up Ahead data", err);
+        } finally {
+            setIsRefreshing(false);
+            setLoading(false);
+        }
+    }, [settings.upAhead]);
+
+    // Initial Load
+    useEffect(() => {
+        loadData(false);
+    }, [loadData]);
+
+    // Handle Blacklist removal
     const handleRemoveFromPlan = (id) => {
         if (!id) return;
         if (plannerStorage.addToBlacklist) {
             plannerStorage.addToBlacklist(id);
-            const newBlacklist = plannerStorage.getBlacklist();
-            setBlacklist(newBlacklist);
-
-            // Optimistically update UI by removing from current data if possible,
-            // or just re-fetch/re-process.
-            // Since logic is in service, we might need to reload or manually filter.
-            // For now, let's manually filter the current state to avoid full re-fetch overhead if possible,
-            // but `generateWeeklyPlan` is in service.
-            // Simplest: Re-fetch (which hits cache/static merge quickly) or better, just re-run the processor?
-            // The service `fetchUpAheadData` does everything.
-            // Let's trigger a "soft reload" which essentially re-processes.
+            setBlacklist(plannerStorage.getBlacklist());
+            // Re-merge/process logic is implied by state update usually,
+            // but since we pre-calculate weekly_plan in service, we might need to soft-refresh.
+            // For now, we rely on the next render or manual refresh to clean up completely,
+            // but we can filter `data` locally for immediate UI feedback if needed.
+            // Simplified: Force a re-merge of current data?
+            // Actually, `mergeUpAheadData` calls `generateWeeklyPlan` which reads blacklist (if passed).
+            // But we can't easily trigger just that.
+            // Let's just reload data (cached/static will be fast).
             loadData(false);
         }
     };
-
-    const loadData = useCallback(async (forceRefresh = false) => {
-        const upAheadSettings = settings.upAhead || {
-            categories: { movies: true, events: true, festivals: true, alerts: true, sports: true, shopping: true, civic: true, weather_alerts: true, airlines: true },
-            locations: ['Chennai']
-        };
-
-        if (data && !forceRefresh) {
-            // If we just want to re-process (e.g. blacklist change), we might need to re-run the fetch
-            // but rely on internal caching or just let it be fast.
-            setIsRefreshing(true);
-        } else {
-            if (!hasFetched.current) {
-                fetchStaticUpAheadData().then(staticData => {
-                    if (staticData && !data) {
-                        setData(staticData);
-                    }
-                });
-            }
-            if (!data) setLoading(true);
-        }
-
-        try {
-            console.log('[UpAhead] Fetching data...');
-            const fetchedData = await fetchUpAheadData(upAheadSettings);
-
-            if ((!fetchedData.timeline || fetchedData.timeline.length === 0) && data && data.timeline && data.timeline.length > 0) {
-                console.warn('[UpAhead] Fetch returned 0 items. Keeping existing data.');
-                setIsRefreshing(false);
-                setLoading(false);
-                return;
-            }
-
-            setData(fetchedData);
-            setLoading(false);
-            setIsRefreshing(false);
-            hasFetched.current = true;
-        } catch (err) {
-            console.error("Failed to load Up Ahead data", err);
-            setLoading(false);
-            setIsRefreshing(false);
-            hasFetched.current = true;
-        }
-    }, [data, settings.upAhead]);
 
     const handleAddToPlan = (item, dateStr) => {
         plannerStorage.addItem(dateStr, {
@@ -103,42 +127,20 @@ function UpAheadPage() {
             link: item.link,
             description: item.description
         });
-        // We might want to switch to 'plan' view or just notify
         alert("Added to Plan!");
     };
 
-    // Sync planner with server on mount
-    useEffect(() => {
-        plannerStorage.sync().then(() => {
-            setBlacklist(plannerStorage.getBlacklist());
-            loadData(false);
-        });
-    }, []);
-
-    useEffect(() => {
-        loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [JSON.stringify(settings.upAhead)]);
-
-    const handleRetry = () => {
-        loadData(true);
-    };
-
     // --- RENDER HELPERS ---
-
     const formatConciseDate = (dateStr) => {
         if (!dateStr) return 'Coming Soon';
         const d = new Date(dateStr);
         if (isNaN(d.getTime())) return dateStr;
-
         const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
         const dayNum = d.getDate().toString().padStart(2, '0');
         const month = d.toLocaleDateString('en-US', { month: 'short' });
-
         return `${dayName}, ${dayNum} ${month}`;
     };
 
-    // Reusable Compact List Component
     const CompactEventList = ({ items, colorClass, emptyMessage, isOffer = false }) => {
         if (!items || items.length === 0) return <div className="empty-state"><p>{emptyMessage}</p></div>;
         return (
@@ -164,10 +166,10 @@ function UpAheadPage() {
     if (loading && !data) {
         return (
             <div className="page-container">
-                <Header title="Up Ahead" icon="🗓️" />
+                <Header title="Up Ahead" icon="🗓️" loadingPhase={loadingPhase} />
                 <div className="loading">
                     <div className="loading__spinner"></div>
-                    <p>Scanning horizon for {settings.upAhead?.locations?.join(', ') || 'events'}...</p>
+                    <p>Scanning horizon...</p>
                 </div>
             </div>
         );
@@ -176,12 +178,12 @@ function UpAheadPage() {
     if (!data || !data.timeline || data.timeline.length === 0) {
          return (
             <div className="page-container">
-                <Header title="Up Ahead" icon="🗓️" />
+                <Header title="Up Ahead" icon="🗓️" loadingPhase={loadingPhase} />
                 <div className="empty-state">
                     <span style={{ fontSize: '3rem' }}>🔭</span>
                     <h3>Nothing on the radar</h3>
-                    <p>No upcoming events found for {settings.upAhead?.locations?.join(', ') || 'your locations'}.</p>
-                    <button onClick={handleRetry} className="btn btn--primary" style={{ marginTop: '1rem' }}>Retry Scan</button>
+                    <p>No upcoming events found.</p>
+                    <button onClick={() => loadData(true)} className="btn btn--primary" style={{ marginTop: '1rem' }}>Retry Scan</button>
                     <div style={{ marginTop: '0.75rem' }}><small>Try adding more locations or categories in <Link to="/settings" style={{ color: 'var(--accent-primary)' }}>Settings</Link>.</small></div>
                 </div>
             </div>
@@ -202,6 +204,7 @@ function UpAheadPage() {
             <Header
                 title="Up Ahead"
                 icon="🗓️"
+                loadingPhase={loadingPhase}
                 rightElement={isRefreshing ? <div className="scanning-indicator" style={{fontSize:'0.7rem', color:'var(--accent-primary)'}}>Scanning...</div> : null}
             />
 
@@ -239,7 +242,6 @@ function UpAheadPage() {
                 </div>
             )}
 
-            {/* View Toggle - UPDATED TABS */}
             <div className="ua-view-toggle scrollable-tabs">
                 <button className={`ua-toggle-btn ${view === 'plan' ? 'active' : ''}`} onClick={() => setView('plan')}>Plan My Week</button>
                 <button className={`ua-toggle-btn ${view === 'offers' ? 'active' : ''}`} onClick={() => setView('offers')}>Offers</button>
@@ -250,7 +252,6 @@ function UpAheadPage() {
                 <button className={`ua-toggle-btn ${view === 'feed' ? 'active' : ''}`} onClick={() => setView('feed')}>Timeline</button>
             </div>
 
-            {/* PLAN MY WEEK VIEW */}
             {view === 'plan' && (
                 <div className="ua-weekly-plan">
                      {(data.weekly_plan && Array.isArray(data.weekly_plan)) ? data.weekly_plan.map((dayData, dIdx) => (
@@ -283,43 +284,12 @@ function UpAheadPage() {
                 </div>
             )}
 
-            {/* RELEASING SOON VIEW (Movies) */}
-            {view === 'movies' && (
-                <div className="ua-tab-view">
-                    <CompactEventList items={data.sections?.movies} colorClass="text-accent-info" emptyMessage="No upcoming movie releases found." />
-                </div>
-            )}
+            {view === 'movies' && <div className="ua-tab-view"><CompactEventList items={data.sections?.movies} colorClass="text-accent-info" emptyMessage="No upcoming movie releases found." /></div>}
+            {view === 'offers' && <div className="ua-tab-view"><CompactEventList items={[...(data.sections?.shopping || []), ...(data.sections?.airlines || [])]} colorClass="text-accent-success" emptyMessage="No offers found." isOffer={true} /><div style={{textAlign:'center', marginTop:'10px', fontSize:'0.8rem', color:'var(--text-muted)'}}>Including Airline Offers</div></div>}
+            {view === 'events' && <div className="ua-tab-view"><CompactEventList items={[...(data.sections?.events || []), ...(data.sections?.sports || [])]} colorClass="text-accent-primary" emptyMessage="No upcoming events found." /></div>}
+            {view === 'alerts' && <div className="ua-tab-view"><CompactEventList items={combinedAlerts} colorClass="text-accent-error" emptyMessage="No alerts found." /></div>}
+            {view === 'festivals' && <div className="ua-tab-view"><CompactEventList items={data.sections?.festivals} colorClass="text-accent-warning" emptyMessage="No festivals found." /></div>}
 
-            {/* OFFERS & DEALS VIEW (Shopping + Airlines) */}
-            {view === 'offers' && (
-                <div className="ua-tab-view">
-                    <CompactEventList items={[...(data.sections?.shopping || []), ...(data.sections?.airlines || [])]} colorClass="text-accent-success" emptyMessage="No offers found." isOffer={true} />
-                    <div style={{textAlign:'center', marginTop:'10px', fontSize:'0.8rem', color:'var(--text-muted)'}}>Including Airline Offers</div>
-                </div>
-            )}
-
-            {/* UPCOMING EVENTS VIEW (Events + Sports) */}
-            {view === 'events' && (
-                <div className="ua-tab-view">
-                    <CompactEventList items={[...(data.sections?.events || []), ...(data.sections?.sports || [])]} colorClass="text-accent-primary" emptyMessage="No upcoming events found." />
-                </div>
-            )}
-
-            {/* ALERT/CIVIC VIEW */}
-            {view === 'alerts' && (
-                <div className="ua-tab-view">
-                    <CompactEventList items={combinedAlerts} colorClass="text-accent-error" emptyMessage="No alerts found." />
-                </div>
-            )}
-
-            {/* FESTIVALS VIEW */}
-            {view === 'festivals' && (
-                <div className="ua-tab-view">
-                    <CompactEventList items={data.sections?.festivals} colorClass="text-accent-warning" emptyMessage="No festivals found." />
-                </div>
-            )}
-
-            {/* TIMELINE VIEW (Feed) */}
             {view === 'feed' && (
                 <div className="ua-timeline">
                     {data.timeline.map((day) => (
