@@ -10,6 +10,7 @@ import { getAllSectionHealth } from '../utils/sectionHealth';
 import { SECTION_KEYWORDS } from '../data/sectionKeywords';
 import { ENTITY_OVERRIDES } from '../data/entityOverrides';
 import { computeImpactScore } from '../services/rssAggregator';
+import DebugTab from '../components/DebugTab';
 
 /**
  * Helper to calculate a "Quality Rating" (1-5 stars) for the current ranking configuration.
@@ -666,7 +667,7 @@ const MergedRankingTab = ({ settings, updateNested, updateSettings, addToList, r
 
                 <SectionTitle icon="📉" title="Freshness & Decay" />
                 <SettingCard>
-                    <SettingItem label="🕰️ Freshness Sensitivity" subLabel="Left: Stricter (Newer) | Right: Relaxed">
+                    <SettingItem label="🎚️ Freshness Sensitivity" subLabel="Left: Stricter (Newer) | Right: Relaxed">
                         <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '10px' }}>
                             <span title="Strict/Fresh" style={{fontSize:'1.2rem'}}>⚡</span>
                             <input
@@ -963,7 +964,7 @@ const MergedRankingTab = ({ settings, updateNested, updateSettings, addToList, r
             </div>
 
             {/* Content Area */}
-            <div className="settings-tab-content" style={{flex:1, overflow:'hidden', padding:'0 15px 15px 15px'}}>
+            <div className="settings-tab-content" style={{flex:1, overflowY:'auto', overflowX:'hidden', padding:'0 15px 15px 15px'}}>
                 {topLevelTab === 'main' && renderMainContent()}
                 {topLevelTab === 'buzz' && renderBuzzContent()}
                 {topLevelTab === 'upahead' && renderUpAheadContent()}

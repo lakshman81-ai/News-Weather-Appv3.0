@@ -6,7 +6,7 @@ import ThemeToggle from './ThemeToggle';
 /**
  * Header Component with optional back navigation
  */
-function Header({ title, icon, showBack = false, backTo = '/', actions, pills, activePill, onPillChange, compact = false }) {
+function Header({ title, icon, showBack = false, backTo = '/', actions, pills, activePill, onPillChange, compact = false, loadingPhase }) {
     const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
 
     useEffect(() => {
@@ -40,7 +40,7 @@ function Header({ title, icon, showBack = false, backTo = '/', actions, pills, a
                 </div>
             )}
 
-            {!showBack && <MarketTicker />}
+            {!showBack && <MarketTicker loadingPhase={loadingPhase} />}
 
             {/* Contextual Pills (Classic Mode) */}
             {pills && (

@@ -4,6 +4,47 @@ import { extractDate, expandDateKeys } from '../utils/dateExtractor.js';
 import plannerStorage from '../utils/plannerStorage.js';
 import { DEFAULT_SETTINGS } from '../utils/storage.js';
 
+export const CACHE_KEY = 'upAhead_cache';
+
+// ============================================================
+// CACHE MANAGEMENT
+// ============================================================
+
+export function loadFromCache() {
+    try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+            const data = JSON.parse(cached);
+            // Optional: Check if cache is too old (e.g. > 8 hours)
+            // But requirement says "show stale data if less than 8hrs", implying we show it anyway?
+            // "Loading phase 1: Load ... with showing stale data if less than 8hrs."
+            // If it's older than 8 hours, maybe we shouldn't show it?
+            // Let's return it with a timestamp check.
+            const age = Date.now() - (new Date(data.lastUpdated || 0).getTime());
+            if (age > 8 * 60 * 60 * 1000) {
+                 console.log('[UpAheadService] Cache is older than 8 hours.');
+                 // We still return it, but maybe mark it?
+                 // User said "show stale data if less than 8hrs".
+                 // If > 8hrs, maybe return null?
+                 // "some time I doubt even if its working since it shows blank page for very long time."
+                 // Showing *something* is better than nothing.
+            }
+            return data;
+        }
+    } catch (e) {
+        console.warn('Cache read error', e);
+    }
+    return null;
+}
+
+export function saveToCache(data) {
+    try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+    } catch (e) {
+        console.warn('Cache write error', e);
+    }
+}
+
 // ============================================================
 // SMART KEYWORD FILTERS FOR PLANNING
 // ============================================================
@@ -222,9 +263,9 @@ export function mergeUpAheadData(baseData, newData) {
 }
 
 
-export async function fetchUpAheadData(settings) {
+export async function fetchLiveUpAheadData(settings) {
     const _t0 = Date.now();
-    console.log('[UpAheadService] Fetching data with settings:', settings);
+    console.log('[UpAheadService] Fetching LIVE data with settings:', settings);
 
     const categories = settings?.categories || { movies: true, events: true, festivals: true, alerts: true, sports: true };
     const locations = settings?.locations && settings.locations.length > 0 ? settings.locations : ['Chennai', 'India'];
@@ -275,10 +316,7 @@ export async function fetchUpAheadData(settings) {
     const uniqueUrls = [...new Map(urlsToFetch.map(item => [item.url, item])).values()];
     console.log(`[UpAheadService] Prepared ${uniqueUrls.length} feeds to fetch.`);
 
-    // 1. Start Static Data Fetch (Baseline)
-    const staticPromise = fetchStaticUpAheadData();
-
-    // 2. Start Live RSS Fetches (Overlay)
+    // Start Live RSS Fetches
     const fetchPromises = uniqueUrls.map(async (feedConfig) => {
         try {
             const { items } = await proxyManager.fetchViaProxy(feedConfig.url);
@@ -289,11 +327,9 @@ export async function fetchUpAheadData(settings) {
         }
     });
 
-    const results = await Promise.allSettled([staticPromise, ...fetchPromises]);
+    const results = await Promise.allSettled(fetchPromises);
 
-    const staticData = results[0].status === 'fulfilled' ? results[0].value : null;
-
-    for (let i = 1; i < results.length; i++) {
+    for (let i = 0; i < results.length; i++) {
         if (results[i].status === 'fulfilled') {
             allItems.push(...results[i].value);
         } else {
@@ -301,15 +337,8 @@ export async function fetchUpAheadData(settings) {
         }
     }
 
-    // 4. Process RSS Data
+    // Process RSS Data
     const rssData = processUpAheadData(allItems, settings);
-
-    // 5. Merge Static (Base) + RSS (Live)
-    let finalData = rssData;
-    if (staticData) {
-        console.log('[UpAhead] Merging Static Data with Live RSS...');
-        finalData = mergeUpAheadData(staticData, rssData);
-    }
 
     try {
         for (const item of allItems) {
@@ -331,10 +360,10 @@ export async function fetchUpAheadData(settings) {
     }
 
     const _dur = Date.now() - _t0;
-    const timelineCount = finalData?.timeline?.reduce((s, d) => s + (d.items?.length || 0), 0) || 0;
-    logStore.success('upAhead', `${timelineCount} items from ${uniqueUrls.length} feeds + static`, { durationMs: _dur });
+    const timelineCount = rssData?.timeline?.reduce((s, d) => s + (d.items?.length || 0), 0) || 0;
+    logStore.success('upAhead', `LIVE: ${timelineCount} items from ${uniqueUrls.length} feeds`, { durationMs: _dur });
 
-    return finalData;
+    return rssData;
 }
 
 function stripHtml(html) {

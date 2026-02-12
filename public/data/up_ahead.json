@@ -1,0 +1,41 @@
+{
+    "lastUpdated": "2024-02-12T10:00:00Z",
+    "timeline": [
+        {
+            "date": "2025-02-13",
+            "dayLabel": "Tomorrow",
+            "items": [
+                {
+                    "id": "mock1",
+                    "title": "Mock Event 1",
+                    "description": "Description 1",
+                    "type": "event",
+                    "category": "events",
+                    "link": "http://example.com"
+                }
+            ]
+        },
+        {
+            "date": "2025-02-14",
+            "dayLabel": "Friday",
+            "items": [
+                {
+                    "id": "mock2",
+                    "title": "Mock Movie Release",
+                    "description": "Description 2",
+                    "type": "movie",
+                    "category": "movies",
+                    "link": "http://example.com"
+                }
+            ]
+        }
+    ],
+    "sections": {
+        "movies": [
+             { "title": "Mock Movie", "date": "2025-02-14", "type": "movie" }
+        ],
+        "events": [
+             { "title": "Mock Event", "date": "2025-02-13", "type": "event" }
+        ]
+    }
+}
