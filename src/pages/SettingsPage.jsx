@@ -593,7 +593,7 @@ function SettingsPage() {
                     ))}
                 </div>
                 <div className="settings-content">
-                    <div className="settings-scroll-area">{renderContent()}</div>
+                    <div className="settings-scroll-area" style={{ overflowY: activeTab === 'ranking' ? 'hidden' : 'auto', padding: activeTab === 'ranking' ? 0 : '15px' }}>{renderContent()}</div>
                     <div className="settings-footer">
                         <div style={{display:'flex', gap:'10px', alignItems:'center'}}>
                             <button className="btn btn--danger" onClick={handleReset} style={{flex:1}}>Reset</button>

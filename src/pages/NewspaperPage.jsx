@@ -8,6 +8,7 @@ import { geminiService } from '../services/geminiService';
 import { extractArticleText } from '../utils/articleExtractor';
 import { summarizeText } from '../utils/extractiveSummary';
 import { proxyManager } from '../services/proxyManager';
+import { virtualPaperService } from '../services/virtualPaperService';
 import '../components/NewspaperLayout.css';
 
 const DATA_URL = '/News-Weather-App/data/epaper_data.json';
@@ -96,35 +97,36 @@ const NewspaperPage = () => {
 
     const fetchFallbackRSS = async () => {
         const sources = {};
-        const fetchPromises = Object.keys(SOURCES).map(async (sourceKey) => {
-            const feeds = FALLBACK_FEEDS[sourceKey];
-            if (!feeds) return;
 
-            const sections = [];
-            for (const feed of feeds) {
-                try {
-                    const rssData = await proxyManager.fetchViaProxy(feed.url);
-                    if (rssData && rssData.items) {
-                        sections.push({
-                            page: feed.page,
-                            articles: rssData.items.slice(0, 15).map(item => ({
-                                title: item.title,
-                                link: item.link
-                            }))
-                        });
-                    }
-                } catch (e) {
-                    console.warn(`Fallback RSS failed for ${sourceKey}: ${feed.url}`, e.message);
+        // Create a timeout promise (e.g., 15 seconds) to prevent infinite loading
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Timeout")), 15000)
+        );
+
+        const fetchPromises = Object.keys(SOURCES).map(async (sourceKey) => {
+            try {
+                // Use Virtual Paper Service (New Robust Fallback)
+                const sections = await virtualPaperService.getVirtualPaper(sourceKey);
+                if (sections && sections.length > 0) {
+                    sources[sourceKey] = sections;
                 }
-            }
-            if (sections.length > 0) {
-                sources[sourceKey] = sections;
+            } catch (e) {
+                console.warn(`Virtual Paper failed for ${sourceKey}:`, e.message);
             }
         });
 
-        await Promise.all(fetchPromises);
+        // Race between the fetch and the timeout
+        try {
+            await Promise.race([
+                Promise.all(fetchPromises),
+                timeoutPromise
+            ]);
+        } catch (error) {
+            console.warn("Virtual Paper fetch timed out or failed:", error);
+            // If we have some data, we can still proceed
+        }
 
-        if (Object.keys(sources).length === 0) throw new Error("All fallbacks failed");
+        if (Object.keys(sources).length === 0) throw new Error("Failed to generate Virtual Paper. Please check connection.");
         return sources;
     };
 

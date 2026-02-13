@@ -90,7 +90,12 @@ const MainPage = () => {
 
     // Generate Topline when data is ready
     useEffect(() => {
-        if (!loading && !weatherLoading) {
+        // Update topline if we have data, even if still refreshing (loading=true)
+        // This ensures the "On This Day" or other content appears immediately on load/reload
+        const hasNews = newsData && Object.keys(newsData).length > 0;
+        const hasWeather = weatherData && Object.keys(weatherData).length > 0;
+
+        if (hasNews || hasWeather || onThisDay) {
             setToplineContent(generateTopline(newsData, weatherData, onThisDay));
         }
     }, [loading, weatherLoading, newsData, weatherData, onThisDay]);

@@ -257,8 +257,9 @@ function UpAheadPage() {
                      {(data.weekly_plan && Array.isArray(data.weekly_plan)) ? data.weekly_plan.map((dayData, dIdx) => (
                          <div key={dIdx} className="ua-plan-day-row">
                              <div className="ua-plan-ribbon">
-                                 <div style={{fontSize: '1rem', fontWeight: 800}}>{dayData.day}</div>
-                                 <div style={{fontSize: '0.8rem', opacity: 0.8}}>{dayData.date}</div>
+                                 <div style={{fontSize: '0.95rem', fontWeight: 800, whiteSpace: 'nowrap'}}>
+                                     {dayData.day} <span style={{opacity: 0.8, fontWeight: 400}}>{dayData.date}</span>
+                                 </div>
                              </div>
                              <div className="ua-plan-day-content">
                                  {dayData.items && dayData.items.length > 0 ? (
