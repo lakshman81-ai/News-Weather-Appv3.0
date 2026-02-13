@@ -37,7 +37,8 @@ import { getSectionHealth, recordFetchCount, checkSingleSource } from '../utils/
 const SECTION_FEEDS = {
     world: [
         GOOGLE_FEEDS.WORLD_IN, // Google News (IN Edition)
-        "https://feeds.bbci.co.uk/news/world/rss.xml",
+        "https://feeds.bbci.co.uk/news/rss.xml", // BBC Top Stories (Broadest Coverage)
+        "https://feeds.bbci.co.uk/news/world/rss.xml", // BBC World Specific
         "https://www.aljazeera.com/xml/rss/all.xml",
         GOOGLE_FEEDS.WORLD_US // Google News (US Edition for backup/variety)
     ],
@@ -272,6 +273,10 @@ export function computeImpactScore(item, section, viewCount = 0, overrideSetting
         else if (item.sentiment.label === 'negative') sentimentBoost = w.sentiment?.negativeBoost || 0.3;
     }
 
+    // 6. Live Updates Boost (New)
+    const isLive = /\b(live|updates|ongoing|developing)\b/i.test(item.title);
+    const liveBoost = isLive ? 1.5 : 1.0;
+
     // Breaking News Detection (Phase 5)
     const breakingResult = breakingDetector.checkBreakingNews(item);
     item.isBreaking = breakingResult.isBreaking;
@@ -281,7 +286,7 @@ export function computeImpactScore(item, section, viewCount = 0, overrideSetting
     // --- NEW SCORING LOGIC CHECK ---
     if (scoringSettings.enableNewScoring === false) {
         // ORIGINAL SCORING (Status Quo)
-        return (freshness + sourceComponent + keywordBoost + sentimentBoost) * sectionPriority * breakingBoost;
+        return (freshness + sourceComponent + keywordBoost + sentimentBoost) * sectionPriority * breakingBoost * liveBoost;
     }
 
     // --- NEW SCORING LOGIC (9-Factor) ---
@@ -377,7 +382,7 @@ export function computeImpactScore(item, section, viewCount = 0, overrideSetting
 
     // Final Calculation with multipliers
     // Added buzzBoost (additive) and buzzFilterPenalty (multiplicative)
-    const total = (baseScore + buzzBoost) * multipliers * temporalMultiplier * sectionPriority * breakingBoost * seenPenalty * buzzFilterPenalty;
+    const total = (baseScore + buzzBoost) * multipliers * temporalMultiplier * sectionPriority * breakingBoost * liveBoost * seenPenalty * buzzFilterPenalty;
 
     // Attach breakdown for debugging (only if debug logs enabled or override present)
     if (scoringSettings.debugLogs || overrideSettings) {
@@ -711,7 +716,11 @@ async function rankAndFilter(items, section, limit, allowedSources, overrideSett
                 }
 
                 // 1. Freshness Filter (Strict)
-                if (!bypassFreshness && (now - item.publishedAt > MAX_AGE_MS)) return false;
+                // Relax freshness for "Live" blogs as they might have started days ago but are active
+                const isLive = /\b(live|updates)\b/i.test(item.title);
+                const effectiveMaxAge = isLive ? MAX_AGE_MS * 3 : MAX_AGE_MS; // Allow up to 3x longer (e.g. ~7 days)
+
+                if (!bypassFreshness && (now - item.publishedAt > effectiveMaxAge)) return false;
 
                 // 2. Filtering Mode (Source vs Keyword)
                 if (settings.filteringMode === 'keyword') {
