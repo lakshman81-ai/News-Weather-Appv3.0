@@ -15,10 +15,10 @@
       "purpose": "any maskable"
     }
   ],
-  "start_url": "/News-Weather-App/",
+  "start_url": "./",
   "background_color": "#ffffff",
   "display": "standalone",
-  "scope": "/News-Weather-App/",
+  "scope": "./",
   "theme_color": "#000000",
   "orientation": "portrait"
 }

@@ -1,8 +1,8 @@
 export function registerSW() {
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            const isGitHubPages = window.location.hostname.includes('github.io');
-            const swPath = isGitHubPages ? '/News-Weather-App/sw.js' : '/sw.js';
+            // Use relative path for maximum compatibility across different deployments/subdirectories
+            const swPath = './sw.js';
 
             navigator.serviceWorker.register(swPath)
                 .then((registration) => {
