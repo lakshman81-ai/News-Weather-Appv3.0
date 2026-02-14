@@ -572,6 +572,14 @@ function SettingsPage() {
                                 Saves Settings, Hidden Events (Plan My Week), and Watchlist to a file.
                             </div>
                         </SettingCard>
+
+                        <SectionTitle icon="🛠️" title="Tools" />
+                        <SettingCard>
+                            <div className="settings-item">
+                                <div className="settings-item__label">PCF Converter</div>
+                                <a href="#/pcf" className="btn btn--primary" style={{textDecoration:'none'}}>Open Tool</a>
+                            </div>
+                        </SettingCard>
                     </div>
                 );
 
