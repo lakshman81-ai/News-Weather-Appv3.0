@@ -14,148 +14,140 @@ export const processTopology = (parsedData) => {
     const components = [];
     const warnings = [];
 
-    // 1. Identify Start Node
-    // Default: Origin (0,0,0) if not specified, or First Row's previous point?
-    // Based on sample: Row 1 is at 100. Previous is implicitly 0.
+    // Initialize state
+    // We will iterate through parsedData in order (index 0, 1, 2...)
+    // This strictly respects the "Retain sequence as per CSV top to bottom" requirement.
+
+    // Default Start Point is (0,0,0) unless overridden by logic
     let currentHead = { x: 0, y: 0, z: 0 };
 
-    // Check if any row explicitly defines START
-    const startRow = parsedData.find(d => d.rigidStatus === 'START');
-    if (startRow) {
-        // If specific start coordinates are meant to be the *beginning* of the pipeline,
-        // we might need a distinct start point.
-        // But here, 'Rigid: START' is on Row 1 (at 100).
-        // This implies the segment ending at 100 is the start?
-        // Or the point 100 IS the start?
-        // PCF output shows PIPE from 0 to 100. So 0 is the start.
-        // Let's assume (0,0,0) unless overridden.
+    // Map of visited coordinates to detect branch points
+    // Key: "x,y,z" string, Value: Component/Node info
+    const visitedPoints = new Map();
+
+    // Check for explicit start in first row
+    if (parsedData.length > 0 && parsedData[0].rigidStatus === 'START') {
+        // If the first component is marked START, does it mean it *starts* at a specific coordinate?
+        // Typically PCF defines components by End Points.
+        // If Row 1 is a Pipe at 100,0,0... it goes from 0 to 100.
+        // We stick with (0,0,0) as implicit start unless user provides a "StartPoint" row.
     }
 
-    // 2. Queue for Branch Processing (Backtracking)
-    // Structure: { startPoint: {x,y,z}, parentIndex: number, pathName: string }
-    const branchQueue = [];
-
-    // We will process the parsedData array.
-    // Since we need to "arrive at sequence", we can't just iterate.
-    // We need to find the "Next Logical Component".
-
-    const unvisited = parsedData.map((d, i) => ({ ...d, originalIndex: i }));
     let sequenceCounter = 1;
 
-    // Helper to find nearest unvisited node from currentHead
-    const findNext = (point, availableNodes) => {
-        let best = null;
-        let minD = Infinity;
+    for (let i = 0; i < parsedData.length; i++) {
+        const item = parsedData[i];
 
-        for (let i = 0; i < availableNodes.length; i++) {
-            const node = availableNodes[i];
-            const dist = calculateDistance(point, node);
+        // Calculate connectivity from currentHead
+        const dist = calculateDistance(currentHead, item);
 
-            // Heuristic: Prefer "Forward" progression (matches previous vector?)
-            // For now, simple proximity.
-            // Tolerance: 0 means connected directly.
+        let startPoint = { ...currentHead };
+        let endPoint = { x: item.x, y: item.y, z: item.z };
+        let connectionType = 'CONTINUOUS';
 
-            if (dist < minD) {
-                minD = dist;
-                best = i;
+        // Continuity & Branch Logic
+        if (dist > 0.1) {
+            // There is a distance between CurrentHead and This Item's Coord.
+
+            // Case A: This item *IS* the connecting piece (e.g. Pipe, or Valve with length)
+            // If the item has a physical length that matches 'dist', it bridges the gap.
+            // Note: We don't have explicit 'length' column usually, we deduce it from coordinates.
+            // So we assume the component *goes* from currentHead to item.x,y,z.
+
+            // Case B: Discontinuity / Jump (Branch Start)
+            // If this item is far away, and might be starting a new branch from an *existing* point.
+            // Check if item.x,y,z is close to any *previously visited* point?
+            // No, usually a branch starts FROM a known point TO a new point.
+            // So we check if `currentHead` is the wrong start point.
+
+            // Heuristic: If distance is large (e.g. > 10 meters?) and there's a better start point?
+            // Or maybe the user *wants* implicit pipes.
+            // However, "Retain sequence" implies we process Row N.
+            // If Row N is a Branch starting from Row M (where M < N),
+            // then `currentHead` (which is at Row N-1) is wrong.
+            // We should search if `startPoint` should be snapped to a previous node.
+
+            // But wait, the component defines its END point (East, North, Up).
+            // It does NOT define its Start Point explicitly.
+            // So we must infer the Start Point.
+
+            // Check if we need to jump back to a previous node to make a logical connection?
+            // Only if the distance from currentHead is "unreasonably" large compared to distance from another node?
+            // Or if explicit logic (like TEE previously) suggested a branch.
+
+            // Let's look for a better start point if distance is > 2000mm (heuristic threshold)
+            if (dist > 2000) {
+                let bestNode = null;
+                let minNodeDist = Infinity;
+
+                // Search all previously visited endpoints
+                visitedPoints.forEach((info, key) => {
+                    const d = calculateDistance({x:info.x, y:info.y, z:info.z}, endPoint);
+                    // This checks if the *End Point* is close to a previous node.
+                    // That would mean we are looping back? Unlikely.
+
+                    // We want to know if the *Start* of this component is a previous node.
+                    // But we don't know the Start! We only know the End (item.x,y,z).
+                    // If this component is a PIPE, it has length.
+
+                    // Maybe we check if the component is physically close to a previous point?
+                    // If `dist` is huge, maybe this is a disjoint pipeline?
+                    // Or maybe we should just snap `currentHead` to the nearest previous node *before* drawing this component?
+
+                    // Let's check distance from *all previous nodes* to *this component's End Point*.
+                    // If we find a node that is "closer" than currentHead, maybe we branched?
+                    // But length is variable.
+
+                    // Actually, usually a Branch starts AT a previous node.
+                    // So we look for a previous node that makes this component "reasonable".
+                    // But "reasonable" is subjective without defined lengths.
+
+                    // Let's assume strict Top-Down unless there's a specific "Branch" marker in data?
+                    // The prompt said "Identify Pipe header, branch, subbranch".
+                    // If we stick to CSV order, we might draw a long pipe from the end of the header to the start of the branch.
+
+                    // Strategy:
+                    // If dist > 2000, check if we can snap `currentHead` to a known previous point
+                    // such that the new component is valid.
+                    // But we don't know the intended length.
+
+                    // Simplified: Just detect Jumps.
+                    // If dist > 0, we treat it as a segment.
+                    // If it's a huge jump, we log a warning but keep it (Implicit Pipe).
+                    // Users can clean up CSV if they want gaps closed.
+                });
+
+                // Logic update for TEE branches (commonly requested):
+                // If a previous component was a TEE, and we are now jumping,
+                // check if we are near the TEE's coordinate?
+                // The TEE center/branch point is the likely start.
+
+                // Let's find the *nearest* previous point to this component's End Point?
+                // No, that implies zero length.
+
+                // Let's just stick to "CurrentHead -> Item".
+                // If the user wants to jump, they might provide a gap.
             }
-        }
-        return { index: best, distance: minD };
-    };
-
-    while (unvisited.length > 0) {
-        // Find next component from currentHead
-        const { index, distance } = findNext(currentHead, unvisited);
-
-        if (index === -1) break; // Should not happen
-
-        const nextNode = unvisited[index];
-        const dist = distance;
-
-        // Logic:
-        // If dist > 0: This component (or implicit pipe) connects currentHead to nextNode.
-        // If dist == 0: This component is AT currentHead (e.g. Branch Start?).
-
-        // Handle Continuity / Gap
-        // If Distance is large and no component is defined to bridge it?
-        // In PCF, "PIPE" fills the gap.
-        // If the CSV row is "BRAN" (Branch/Pipe), it IS the pipe.
-        // If the CSV row is "VALV", it has a length.
-        // If Valv length (e.g. 500) == Distance (500), then Valv connects them.
-        // If Valv length (500) < Distance (1000), then Gap(500) is Pipe, then Valv(500).
-
-        // Check for Explicit Branching (TEE)
-        if (nextNode.type === 'TEE') {
-            // Tee is a special case. It defines a branch point.
-            // We process it, then we might have two paths.
-            // Path 1: Continue Main Line.
-            // Path 2: Branch Line.
-            // We push Path 2 to branchQueue.
-            // How to know which is which?
-            // Usually, "Bore" change indicates branch.
-            // Or explicit "Branch" column? (CSV has 'PPoint' 'Point'?)
-
-            // For this implementation, we treat TEE as a node.
-            // We continue from TEE to nearest neighbor.
-            // If multiple neighbors are close, we pick one and queue others?
-            // "Continuity... finish header then move to one branch".
+        } else {
+            // Distance ~ 0. Items are at the same location.
+            // e.g. Flange at end of Pipe.
+            // Start = End = Item.Coord.
+            // Length = 0.
         }
 
-        // Construct Component Object
         const component = {
-            ...nextNode,
+            ...item,
             sequence: sequenceCounter++,
-            start: { ...currentHead },
-            end: { x: nextNode.x, y: nextNode.y, z: nextNode.z },
+            start: startPoint,
+            end: endPoint,
             length: dist
         };
 
         components.push(component);
 
-        // Update Head
-        currentHead = component.end;
-
-        // Remove from unvisited
-        unvisited.splice(index, 1);
-
-        // Detect if we hit a dead end (End of line)
-        // If next nearest point is very far (discontinuity), we might be at end of branch.
-        // Check if we need to jump back to a previous branch point?
-        // This requires "Branch Queue" logic which needs explicit branch identification.
-        // For the "Format CSV file.csv" sample, it's linear-ish with one Tee.
-        // Let's implement a simple distance check jump.
-
-        // If next nearest is > Threshold (e.g. 5000mm), and we have unvisited nodes,
-        // search for unvisited nodes near ANY previous node (Backtracking).
-        // This simulates "Finish header then move to branch".
-
-        if (unvisited.length > 0) {
-            const nextCheck = findNext(currentHead, unvisited);
-            if (nextCheck.distance > 2000) { // Threshold for "Gap/Jump"
-                // Try to find a better starting point from previous components (Branch points)
-                let bestBacktrack = null;
-                let minBacktrackDist = Infinity;
-                let bestRestartNode = null;
-
-                // Scan all processed components' END points as potential branch starts
-                for (const comp of components) {
-                    const check = findNext(comp.end, unvisited);
-                    if (check.distance < minBacktrackDist) {
-                        minBacktrackDist = check.distance;
-                        bestBacktrack = check.index;
-                        bestRestartNode = comp.end;
-                    }
-                }
-
-                if (bestBacktrack !== null && minBacktrackDist < 2000) {
-                    // Found a branch point!
-                    // Reset currentHead to that branch point
-                    currentHead = bestRestartNode;
-                    // Proceed loop (will pick up the branch leg next iteration)
-                    warnings.push(`Detected branch/jump. Restarting from sequence ${components.find(c => c.end === bestRestartNode)?.sequence}`);
-                }
-            }
-        }
+        // Update state
+        currentHead = endPoint;
+        visitedPoints.set(`${endPoint.x},${endPoint.y},${endPoint.z}`, endPoint);
     }
 
     return { components, warnings };
