@@ -1761,11 +1761,11 @@ body {
 
   .bottom-nav--desktop .bottom-nav__icon {
     margin-bottom: 0;
-    font-size: 1.5rem; /* Increased for better visibility */
+    font-size: 2rem; /* Increased to 2rem as requested */
   }
 
   .bottom-nav--desktop .bottom-nav__label {
-    font-size: 0.9rem; /* Increased for better readability */
+    font-size: 1rem; /* Slightly larger text */
     display: inline;
     font-weight: 600;
   }
