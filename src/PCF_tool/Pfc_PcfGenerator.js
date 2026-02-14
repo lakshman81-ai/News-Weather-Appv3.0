@@ -88,6 +88,12 @@ export const generatePCF = (components, config) => {
         // if (comp.temperature) output += `    COMPONENT-ATTRIBUTE2  ${comp.temperature} C\n`;
         output += `    COMPONENT-ATTRIBUTE3  ${mat}\n`;
         if (comp.wallThickness) output += `    COMPONENT-ATTRIBUTE4  ${comp.wallThickness} MM\n`;
+
+        // CA8: Weight (Specific for Flange/Valve)
+        if ((comp.pcfType === 'FLANGE' || comp.pcfType === 'VALVE') && comp.weight) {
+            output += `    COMPONENT-ATTRIBUTE8  ${comp.weight} KG\n`;
+        }
+
         output += `    COMPONENT-ATTRIBUTE10  1500 KPA\n`; // Hydro test default?
 
         output += `\n`;

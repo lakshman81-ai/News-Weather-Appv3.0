@@ -30,22 +30,30 @@ const Pfc_Preview = ({ output, warnings, components }) => {
                 </div>
             )}
 
-            <textarea
-                readOnly
-                value={output}
-                className="pfc-output-area"
-            />
+            <div className="pfc-split-view">
+                <div className="pfc-pane">
+                    <h4>Processed Sequence ({components.length})</h4>
+                    <div className="pfc-components-scroll">
+                        {components.map((comp, i) => (
+                            <div key={i} className="pfc-comp-row">
+                                <span className="pfc-idx">#{i+1}</span>
+                                <span className="pfc-type">{comp.pcfType}</span>
+                                <span className="pfc-detail">
+                                    {comp.length ? `L=${comp.length.toFixed(1)}` : ''}
+                                    @{comp.x}, {comp.y}, {comp.z}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
 
-            <div className="pfc-components-list">
-                <h4>Processed Components ({components.length})</h4>
-                <div className="pfc-components-scroll">
-                    {components.map((comp, i) => (
-                        <div key={i} className="pfc-comp-row">
-                            <span>#{i+1} {comp.pcfType}</span>
-                            <span>{comp.length ? `L=${comp.length.toFixed(1)}` : ''}</span>
-                            <span>@{comp.x}, {comp.y}, {comp.z}</span>
-                        </div>
-                    ))}
+                <div className="pfc-pane">
+                    <h4>PCF Output</h4>
+                    <textarea
+                        readOnly
+                        value={output}
+                        className="pfc-output-area"
+                    />
                 </div>
             </div>
 
@@ -55,11 +63,19 @@ const Pfc_Preview = ({ output, warnings, components }) => {
                 .pfc-download-btn { background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
                 .pfc-download-btn:hover { background: #218838; }
                 .pfc-warnings { background: #fff3cd; color: #856404; padding: 15px; border: 1px solid #ffeeba; border-radius: 4px; }
-                .pfc-output-area { width: 100%; height: 300px; font-family: monospace; font-size: 14px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; white-space: pre; }
-                .pfc-components-list { background: #f8f9fa; padding: 15px; border-radius: 4px; }
-                .pfc-components-scroll { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
-                .pfc-comp-row { display: flex; gap: 10px; font-size: 0.9em; padding: 4px; border-bottom: 1px solid #eee; }
-                .pfc-comp-row:last-child { border-bottom: none; }
+
+                .pfc-split-view { display: flex; gap: 20px; flex: 1; min-height: 400px; }
+                .pfc-pane { flex: 1; display: flex; flex-direction: column; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 10px; }
+                .pfc-pane h4 { margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+
+                .pfc-output-area { width: 100%; flex: 1; font-family: monospace; font-size: 13px; padding: 10px; border: 1px solid #eee; background: #f8f9fa; resize: none; white-space: pre; }
+
+                .pfc-components-scroll { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0; }
+                .pfc-comp-row { display: flex; gap: 10px; font-size: 0.85em; padding: 6px; border-bottom: 1px solid #eee; align-items: center; }
+                .pfc-comp-row:nth-child(even) { background: #f9f9f9; }
+                .pfc-idx { font-weight: bold; color: #888; width: 30px; }
+                .pfc-type { font-weight: bold; color: #007bff; width: 60px; }
+                .pfc-detail { color: #555; }
             `}</style>
         </div>
     );
