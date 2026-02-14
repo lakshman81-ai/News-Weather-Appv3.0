@@ -1,6 +1,6 @@
 /* Service Worker for News & Weather App */
 const CACHE_NAME = 'news-weather-app-v1';
-const BASE_PATH = '/News-Weather-App/';
+const BASE_PATH = './';
 
 // Assets to cache immediately
 const PRECACHE_URLS = [
@@ -68,8 +68,8 @@ self.addEventListener('notificationclick', (event) => {
             // Check for existing tab
             for (let i = 0; i < windowClients.length; i++) {
                 const client = windowClients[i];
-                // Check if it's our app
-                if (client.url.includes(BASE_PATH) && 'focus' in client) {
+                // Check if it's our app (simple origin check, as SW is scoped)
+                if (client.url.startsWith(self.registration.scope) && 'focus' in client) {
                     // Send a message to the client to trigger a specific view/refresh if needed
                     client.postMessage({ type: 'NOTIFICATION_CLICK', action: event.action });
                     return client.focus();

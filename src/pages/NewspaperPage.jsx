@@ -11,7 +11,8 @@ import { proxyManager } from '../services/proxyManager';
 import { virtualPaperService } from '../services/virtualPaperService';
 import '../components/NewspaperLayout.css';
 
-const DATA_URL = '/News-Weather-App/data/epaper_data.json';
+// Use import.meta.env.BASE_URL for correct path resolution in any deployment
+const DATA_URL = `${import.meta.env.BASE_URL}data/epaper_data.json`;
 
 const SOURCES = {
   THE_HINDU: { id: 'THE_HINDU', label: 'The Hindu', lang: 'en' },
