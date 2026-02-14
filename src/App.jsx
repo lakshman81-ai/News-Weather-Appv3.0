@@ -10,6 +10,7 @@ import SettingsPage from './pages/SettingsPage';
 import RefreshPage from './pages/RefreshPage';
 import FollowingPage from './pages/FollowingPage';
 import TopicDetail from './pages/TopicDetail';
+import Pfc_App from './PCF_tool/Pfc_App';
 import BottomNav from './components/BottomNav';
 import ScrollToTop from './components/ScrollToTop';
 import { WeatherProvider } from './context/WeatherContext';
@@ -42,6 +43,7 @@ function App() {
                     <Route path="/refresh" element={<RefreshPage />} />
                     <Route path="/following" element={<FollowingPage />} />
                     <Route path="/following/:topicId" element={<TopicDetail />} />
+                    <Route path="/pcf" element={<Pfc_App />} />
                   </Routes>
                   <BottomNav />
                 </div>
