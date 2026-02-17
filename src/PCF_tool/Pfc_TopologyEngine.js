@@ -12,7 +12,7 @@ export class Pfc_TopologyEngine {
   }
 
   parseCSV(content) {
-    const lines = content.split(/\r?\n/).filter(l => l.trim().length > 0);
+    const lines = content.split(/\r\n|\n|\r/).filter(l => l.trim().length > 0);
     if (lines.length === 0) return [];
 
     const headers = lines[0].split(',').map(h => h.trim());

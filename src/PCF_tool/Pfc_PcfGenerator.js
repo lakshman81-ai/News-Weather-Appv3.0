@@ -4,7 +4,10 @@ export class Pfc_PcfGenerator {
     this.pcfLines = [];
     this.lastEndpoint = null;
     this.lastBore = 0;
-    this.maxPipeLength = 13100; // Matches observed segment length in Expected PCF
+
+    // Configuration
+    this.maxPipeLength = 13100; // Standard cut length
+    this.continuityTolerance = 6.0; // +/- 6mm tolerance
   }
 
   generate() {
@@ -42,7 +45,9 @@ export class Pfc_PcfGenerator {
       Math.pow(end.z - start.z, 2)
     );
 
-    if (dist <= 1.0) return; // Skip negligible gaps
+    // Tolerance Check
+    // If gap is extremely small (< 0.1mm), ignore it (assume continuous).
+    if (dist < 0.1) return;
 
     if (dist > this.maxPipeLength) {
       // Split into segments
@@ -86,35 +91,51 @@ export class Pfc_PcfGenerator {
     if (group.type === 'ELBO' && !centreRow && group.rows.length === 3) {
       centreRow = group.rows[1];
     }
-    // For TEE, rows are often 8(1), 9(3), 10(0), 11(2).
-    // Start is 8. End is 11.
-    // Branch is 9. Centre is 10.
 
-    const startCoord = startRow.coords;
+    // Coordinates
+    let startCoord = { ...startRow.coords };
     const endCoord = endRow.coords;
     const bore = startRow.bore || this.lastBore;
     this.lastBore = bore;
 
-    // Implicit Pipe Check
+    // Connectivity Logic
     if (this.lastEndpoint) {
-      // If BRAN, it's a jump/start point, so do NOT connect to previous
-      if (group.type !== 'BRAN') {
-          this.generatePipe(this.lastEndpoint, startCoord, bore);
+      if (group.type === 'BRAN') {
+         // Break in continuity (Jump)
+         // Do not generate pipe.
+         // Do not snap.
+      } else {
+         const dist = Math.sqrt(
+            Math.pow(startCoord.x - this.lastEndpoint.x, 2) +
+            Math.pow(startCoord.y - this.lastEndpoint.y, 2) +
+            Math.pow(startCoord.z - this.lastEndpoint.z, 2)
+         );
+
+         if (dist <= this.continuityTolerance) {
+            // SNAP: Inside tolerance window (e.g. 6mm).
+            // Assume connected. Move startCoord to lastEndpoint to ensure perfect continuity.
+            if (dist > 0.001) {
+               // console.log(`Snapping gap of ${dist.toFixed(2)}mm at index ${index}`);
+               startCoord = { ...this.lastEndpoint };
+            }
+         } else {
+            // GAP: Outside tolerance. Generate Implicit Pipe.
+            this.generatePipe(this.lastEndpoint, startCoord, bore);
+         }
       }
     } else {
         if (group.type === 'BRAN') {
             this.lastEndpoint = startCoord;
             return;
         }
-        // If not BRAN, assume start point is implicit start?
-        // Usually pipe starts with BRAN or FLAN.
     }
 
     // Component Generation
     switch (group.type) {
       case 'BRAN':
-        // Do nothing (handled in Implicit Pipe Check)
+        // No component output, just a topology marker
         break;
+
       case 'TEE':
       case 'OLET':
         this.pcfLines.push('TEE');
@@ -156,7 +177,7 @@ export class Pfc_PcfGenerator {
         this.pcfLines.push('REDUCER-ECCENTRIC');
         this.pcfLines.push(`    END-POINT  ${this.formatCoord(startCoord, startRow.bore)}`);
         this.pcfLines.push(`    END-POINT  ${this.formatCoord(endCoord, endRow.bore)}`);
-        this.pcfLines.push(`    FLAT-DIRECTION `); // Empty in expected
+        this.pcfLines.push(`    FLAT-DIRECTION `);
         this.pcfLines.push(`    SKEY REBW`);
         break;
 
@@ -173,19 +194,23 @@ export class Pfc_PcfGenerator {
       case 'ANCI':
         // SUPPORT
         this.pcfLines.push('SUPPORT');
+        // Support is at a single point (startCoord).
         this.pcfLines.push(`    CO-ORDS       ${this.formatCoord(startCoord, bore)}`);
         this.pcfLines.push(`    SKEY ANCH`);
-        // Support consumes NO length. lastEndpoint stays at startCoord (which is same as endCoord for ANCI)
-        // Ensure lastEndpoint is updated to endCoord.
+        // Support does not advance the geometry.
+        // It's attached to the line.
+        // We should NOT update lastEndpoint to the support's coord if we want continuity
+        // BUT if the CSV sequence flows through the support, then the next pipe starts FROM the support location.
+        // In Sys-1, ANCI rows are sequential along the line.
+        // So we MUST update lastEndpoint to startCoord (which is where the support is).
+        // This allows the next pipe to start from the support.
+        // Note: For ANCI, startCoord == endCoord usually.
         break;
 
       case 'FLAN':
       case 'FBLI':
       case 'GASK':
       case 'PCOM':
-        // Check if GASK?
-        // If it's a gasket, we might want to merge or handle specifically.
-        // For now, treat as PIPE-FIXED to match general structure.
         this.pcfLines.push('PIPE-FIXED');
         this.pcfLines.push(`    END-POINT  ${this.formatCoord(startCoord, bore)}`);
         this.pcfLines.push(`    END-POINT  ${this.formatCoord(endCoord, bore)}`);
@@ -196,6 +221,9 @@ export class Pfc_PcfGenerator {
         console.warn(`Unknown type: ${group.type}`);
     }
 
+    // Update lastEndpoint
+    // For ANCI, startCoord is the point. endCoord is same.
+    // So lastEndpoint becomes the support location.
     this.lastEndpoint = endCoord;
   }
 }
