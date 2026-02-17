@@ -231,39 +231,3 @@ export default {
     fetchOTTEntertainment,
     fetchAllEntertainment
 };
-
-// ============================================
-// CACHE MANAGEMENT
-// ============================================
-
-export const ENTERTAINMENT_CACHE_KEY = 'entertainment_cache';
-
-export function loadEntertainmentCache() {
-    try {
-        const cached = localStorage.getItem(ENTERTAINMENT_CACHE_KEY);
-        if (cached) {
-            const data = JSON.parse(cached);
-            // Optional: Check age
-            const age = Date.now() - (data.timestamp || 0);
-             if (age > 8 * 60 * 60 * 1000) {
-                 console.log('[EntertainmentService] Cache is older than 8 hours.');
-            }
-            return data.items || [];
-        }
-    } catch (e) {
-        console.warn('Entertainment Cache read error', e);
-    }
-    return null;
-}
-
-export function saveEntertainmentCache(items) {
-    try {
-        const data = {
-            timestamp: Date.now(),
-            items: items
-        };
-        localStorage.setItem(ENTERTAINMENT_CACHE_KEY, JSON.stringify(data));
-    } catch (e) {
-        console.warn('Entertainment Cache write error', e);
-    }
-}

@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "csv-parse": "^6.1.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-icons": "^5.5.0",
@@ -33,5 +34,20 @@
     "globals": "^16.5.0",
     "node-fetch": "^3.3.2",
     "vite": "^7.2.4"
+  },
+  "description": "A React-based dashboard that aggregates real-time news, weather, and market updates. It features a \"Smart Mix\" news engine that prioritizes high-impact stories and provides a focused, segment-based daily overview.",
+  "main": "eslint.config.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lakshman81-ai/News-Weather-Appv3.0.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lakshman81-ai/News-Weather-Appv3.0/issues"
   }
 }

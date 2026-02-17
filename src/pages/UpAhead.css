@@ -243,9 +243,9 @@
 
 .ua-plan-ribbon {
   display: inline-flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column; /* Stack Day and Date */
+  align-items: flex-start;
+  gap: 2px;
   background: var(--accent-primary);
   color: #ffffff;
   padding: 8px 16px;
@@ -253,7 +253,7 @@
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   position: relative;
   z-index: 1;
-  min-width: fit-content;
+  min-width: 120px;
 }
 
 .ua-plan-day-content {

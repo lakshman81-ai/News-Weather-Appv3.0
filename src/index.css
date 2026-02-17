@@ -234,7 +234,7 @@ body {
 }
 .header--compact {
   padding: 4px var(--spacing-sm);
-  min-height: 36px;
+  min-height: 32px;
 }
 
 .header__actions {
@@ -282,7 +282,11 @@ body {
   color: var(--accent-primary);
 }
 
-/* Consolidated compact header styles */
+.header--compact {
+  padding: var(--spacing-sm) var(--spacing-md);
+  min-height: 50px;
+}
+
 .header--compact .header__back {
   font-size: var(--font-size-md);
 }
@@ -1761,13 +1765,12 @@ body {
 
   .bottom-nav--desktop .bottom-nav__icon {
     margin-bottom: 0;
-    font-size: 2rem; /* Increased to 2rem as requested */
+    font-size: 1rem;
   }
 
   .bottom-nav--desktop .bottom-nav__label {
-    font-size: 1rem; /* Slightly larger text */
+    font-size: 0.78rem;
     display: inline;
-    font-weight: 600;
   }
 
   /* TimelineHeader & header below compact top nav */

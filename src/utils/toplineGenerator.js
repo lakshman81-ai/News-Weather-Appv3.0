@@ -6,9 +6,7 @@
  * - Weather Insight
  */
 
-import { quickFactsService } from '../services/quickFactsService';
-
-const QUICK_FACTS_FALLBACK = [
+const QUICK_FACTS = [
     "Honey never spoils. Archaeologists have found pots of honey in ancient Egyptian tombs that are over 3,000 years old and still edible.",
     "Octopuses have three hearts. Two pump blood to the gills, while one pumps it to the rest of the body.",
     "Bananas are berries, but strawberries aren't.",
@@ -16,10 +14,7 @@ const QUICK_FACTS_FALLBACK = [
     "A group of flamingos is called a 'flamboyance'.",
     "Wombat poop is cube-shaped.",
     "The shortest war in history lasted 38 minutes between Britain and Zanzibar in 1896.",
-    "Cleopatra lived closer in time to the Moon landing than to the construction of the Great Pyramid of Giza.",
-    "Sloths can hold their breath longer than dolphins (up to 40 minutes).",
-    "A cloud can weigh more than a million pounds.",
-    "The first computer bug was an actual moth trapped in a relay of the Harvard Mark II computer in 1947."
+    "Cleopatra lived closer in time to the Moon landing than to the construction of the Great Pyramid of Giza."
 ];
 
 const HISTORY_EVENTS = [
@@ -28,29 +23,10 @@ const HISTORY_EVENTS = [
     "Today marks a moment of innovation in history."
 ];
 
-export async function fetchOnThisDay() {
-    try {
-        const facts = await quickFactsService.fetchDailyFacts();
-        if (facts && facts.length > 0) {
-            // Return a random fact from the fetched list
-            const event = facts[Math.floor(Math.random() * facts.length)];
-            return {
-                text: `On this day in ${event.year}: ${event.text}`,
-                year: event.year,
-                isDynamic: true
-            };
-        }
-        return null;
-    } catch (e) {
-        console.warn('OnThisDay fetch failed:', e);
-        return null;
-    }
-}
-
 function getTrending(newsData) {
     // Extract words from headlines
     const words = [];
-    const stopWords = new Set(['the', 'and', 'for', 'with', 'that', 'this', 'from', 'dead', 'kills', 'says', 'india', 'world', 'chennai', 'tamil', 'nadu']);
+    const stopWords = new Set(['the', 'and', 'for', 'with', 'that', 'this', 'from', 'dead', 'kills', 'says', 'india', 'world']);
 
     // Aggregate all headlines
     const allNews = [
@@ -111,39 +87,30 @@ function getWeatherInsight(weatherData) {
     };
 }
 
-export function generateTopline(newsData, weatherData, onThisDayEvent = null) {
+export function generateTopline(newsData, weatherData) {
     const options = [];
 
-    // 1. Fact (Use Dynamic if available, else Fallback)
-    // If onThisDayEvent is available (Dynamic), use it primarily.
-    if (onThisDayEvent && onThisDayEvent.isDynamic) {
-        // High priority: Add multiple times to ensure visibility
-        const dynamicFact = {
-            type: 'ON THIS DAY',
-            icon: '📅',
-            text: onThisDayEvent.text
-        };
+    // 1. Fact
+    options.push({
+        type: 'QUICK FACT',
+        icon: '💡',
+        text: QUICK_FACTS[Math.floor(Math.random() * QUICK_FACTS.length)]
+    });
 
-        // Add 3 times to significantly boost probability over other options
-        options.push(dynamicFact);
-        options.push(dynamicFact);
-        options.push(dynamicFact);
-    } else {
-        // Fallback to static facts only if dynamic is missing
-        options.push({
-            type: 'DID YOU KNOW?',
-            icon: '💡',
-            text: QUICK_FACTS_FALLBACK[Math.floor(Math.random() * QUICK_FACTS_FALLBACK.length)]
-        });
-    }
-
-    // 2. Trending (if news available) - Add once
+    // 2. Trending (if news available)
     const trending = getTrending(newsData);
     if (trending) options.push(trending);
 
-    // 3. Weather (if available) - Add once
+    // 3. Weather (if available)
     const weather = getWeatherInsight(weatherData);
     if (weather) options.push(weather);
+
+    // 4. Flashback (Generic for now)
+    options.push({
+        type: 'FLASHBACK',
+        icon: '🕰️',
+        text: HISTORY_EVENTS[Math.floor(Math.random() * HISTORY_EVENTS.length)]
+    });
 
     // Random Pick
     return options[Math.floor(Math.random() * options.length)];

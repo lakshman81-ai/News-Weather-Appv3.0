@@ -1,12 +1,3 @@
-// Mock localStorage before import
-const mockLocalStorage = {
-    getItem: () => null,
-    setItem: () => {},
-    removeItem: () => {},
-    clear: () => {}
-};
-global.localStorage = mockLocalStorage;
-
 import { extractFutureDate, processUpAheadData } from './upAheadService.js';
 
 function runTests() {

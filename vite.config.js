@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   // Use relative base path for maximum compatibility on GitHub Pages
-  base: './',
+  base: '/News-Weather-App/',
   server: {
     proxy: {
       '/api': {

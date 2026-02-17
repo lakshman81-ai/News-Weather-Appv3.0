@@ -10,7 +10,6 @@ import { getAllSectionHealth } from '../utils/sectionHealth';
 import { SECTION_KEYWORDS } from '../data/sectionKeywords';
 import { ENTITY_OVERRIDES } from '../data/entityOverrides';
 import { computeImpactScore } from '../services/rssAggregator';
-import DebugTab from '../components/DebugTab';
 
 /**
  * Helper to calculate a "Quality Rating" (1-5 stars) for the current ranking configuration.
@@ -508,6 +507,13 @@ function SettingsPage() {
                     <div className="settings-tab-content">
                         <SectionTitle icon="🔧" title="Advanced" />
                         <SettingCard>
+                            <div className="settings-item" style={{justifyContent: 'space-between'}}>
+                                <div className="settings-item__label">
+                                    <span>PCF Converter Tool</span>
+                                    <small style={{display:'block', color:'var(--text-muted)'}}>Convert CSV to PCF</small>
+                                </div>
+                                <a href="#/pcf" className="btn btn--secondary" style={{textDecoration:'none', fontSize:'0.8rem', padding:'6px 12px'}}>Open Tool</a>
+                            </div>
                             <SettingItem label="Enable News Cache" subLabel="Faster loads, 5min TTL">
                                 <Toggle checked={settings.enableCache !== false} onChange={(val) => updateSettings({ ...settings, enableCache: val })} />
                             </SettingItem>
@@ -572,14 +578,6 @@ function SettingsPage() {
                                 Saves Settings, Hidden Events (Plan My Week), and Watchlist to a file.
                             </div>
                         </SettingCard>
-
-                        <SectionTitle icon="🛠️" title="Tools" />
-                        <SettingCard>
-                            <div className="settings-item">
-                                <div className="settings-item__label">PCF Converter</div>
-                                <a href="#/pcf" className="btn btn--primary" style={{textDecoration:'none'}}>Open Tool</a>
-                            </div>
-                        </SettingCard>
                     </div>
                 );
 
@@ -601,7 +599,7 @@ function SettingsPage() {
                     ))}
                 </div>
                 <div className="settings-content">
-                    <div className="settings-scroll-area" style={{ overflowY: activeTab === 'ranking' ? 'hidden' : 'auto', padding: activeTab === 'ranking' ? 0 : '15px' }}>{renderContent()}</div>
+                    <div className="settings-scroll-area">{renderContent()}</div>
                     <div className="settings-footer">
                         <div style={{display:'flex', gap:'10px', alignItems:'center'}}>
                             <button className="btn btn--danger" onClick={handleReset} style={{flex:1}}>Reset</button>
@@ -675,7 +673,7 @@ const MergedRankingTab = ({ settings, updateNested, updateSettings, addToList, r
 
                 <SectionTitle icon="📉" title="Freshness & Decay" />
                 <SettingCard>
-                    <SettingItem label="🎚️ Freshness Sensitivity" subLabel="Left: Stricter (Newer) | Right: Relaxed">
+                    <SettingItem label="🕰️ Freshness Sensitivity" subLabel="Left: Stricter (Newer) | Right: Relaxed">
                         <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '10px' }}>
                             <span title="Strict/Fresh" style={{fontSize:'1.2rem'}}>⚡</span>
                             <input
@@ -972,7 +970,7 @@ const MergedRankingTab = ({ settings, updateNested, updateSettings, addToList, r
             </div>
 
             {/* Content Area */}
-            <div className="settings-tab-content" style={{flex:1, overflowY:'auto', overflowX:'hidden', padding:'0 15px 15px 15px'}}>
+            <div className="settings-tab-content" style={{flex:1, overflow:'hidden', padding:'0 15px 15px 15px'}}>
                 {topLevelTab === 'main' && renderMainContent()}
                 {topLevelTab === 'buzz' && renderBuzzContent()}
                 {topLevelTab === 'upahead' && renderUpAheadContent()}

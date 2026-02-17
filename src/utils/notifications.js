@@ -26,8 +26,8 @@ export function sendNotification(title, options = {}) {
         if (navigator.serviceWorker && navigator.serviceWorker.ready) {
             navigator.serviceWorker.ready.then(registration => {
                 registration.showNotification(title, {
-                    icon: `${import.meta.env.BASE_URL}vite.svg`,
-                    badge: `${import.meta.env.BASE_URL}vite.svg`,
+                    icon: '/News-Weather-App/vite.svg',
+                    badge: '/News-Weather-App/vite.svg',
                     vibrate: [200, 100, 200],
                     requireInteraction: true, // Keeps it until user interacts
                     ...options
@@ -36,7 +36,7 @@ export function sendNotification(title, options = {}) {
         } else {
             // Fallback to standard API
             new Notification(title, {
-                icon: `${import.meta.env.BASE_URL}vite.svg`,
+                icon: '/News-Weather-App/vite.svg',
                 ...options
             });
         }

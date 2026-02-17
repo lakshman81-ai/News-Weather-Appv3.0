@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useMemo } from 'react';
 import { useMarket } from '../context/MarketContext';
 import './MarketTicker.css';
 
-const MarketTicker = ({ loadingPhase }) => {
+const MarketTicker = () => {
     const { marketData, loading, lastFetch } = useMarket();
     const scrollRef = useRef(null);
     const isPaused = useRef(false);
@@ -15,8 +15,7 @@ const MarketTicker = ({ loadingPhase }) => {
         const allItems = [...indices, ...commodities];
 
         // Specific items to display in order (Removed Currencies as requested)
-        // Including variations like "NSE 50" or "50" to catch them and rename
-        const allowedNames = ['NIFTY 50', 'NSE 50', '50', 'SENSEX', 'BSE SENSEX', 'Gold', 'Silver'];
+        const allowedNames = ['NIFTY 50', 'SENSEX', 'Gold', 'Silver'];
 
         return allowedNames
             .map(name => allItems.find(item => item.name === name))
@@ -85,35 +84,10 @@ const MarketTicker = ({ loadingPhase }) => {
         return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
-    const getDisplayName = (name) => {
-        if (name === 'NSE 50' || name === '50') return 'NIFTY 50';
-        if (name === 'BSE SENSEX') return 'SENSEX';
-        return name;
-    };
-
-    // Progress Visualization based on loadingPhase
-    const getPhaseStyle = () => {
-        // Phase 1 (Local): Light Green
-        // Phase 2 (Static): Medium Green
-        // Phase 3 (Live): Dark Green (or complete)
-        // We use a bottom border or background tint to show progress unobtrusively
-        if (!loadingPhase) return {};
-
-        let color = 'transparent';
-        if (loadingPhase === 1) color = 'rgba(144, 238, 144, 0.2)'; // Light Green
-        else if (loadingPhase === 2) color = 'rgba(60, 179, 113, 0.2)'; // Medium Sea Green
-        else if (loadingPhase === 3) color = 'rgba(34, 139, 34, 0.2)'; // Forest Green (Done)
-
-        return {
-            background: `linear-gradient(to bottom, transparent, ${color})`,
-            transition: 'background 0.5s ease'
-        };
-    };
-
     if ((loading && markets.length === 0) || markets.length === 0) return null;
 
     return (
-        <div className="market-ticker-container" style={getPhaseStyle()}>
+        <div className="market-ticker-container">
             <div className="ticker-label">📈</div>
 
             <div
@@ -130,7 +104,7 @@ const MarketTicker = ({ loadingPhase }) => {
                         const stale = isItemStale(item);
                         return (
                             <div key={`${item.name}-${index}`} className={`ticker-item ${stale ? 'stale-data' : ''}`}>
-                                <span className="ticker-name">{getDisplayName(item.name)}</span>
+                                <span className="ticker-name">{item.name}</span>
                                 <span className="ticker-price">
                                     {/* Handle unit display for commodities */}
                                     {item.name === 'Gold' || item.name === 'Silver' ? item.value :
