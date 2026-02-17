@@ -39,9 +39,64 @@ Instead of separate modes, I implemented a single **Robust Mode** that:
 - **CSV Parser:** Updated to handle `\r`, `\n`, and `\r\n` line endings correctly.
 - **Quote Handling:** Robustly handles escaped quotes in CSV fields.
 
-## 3. Verification
+## 3. Technical Architecture & Code Structure
+
+The tool is modularized into two primary classes within `src/PCF_tool/`, separating data parsing from geometry generation.
+
+### `Pfc_TopologyEngine.js` (Parser & Grouper)
+**Role:** Ingests raw CSV text, cleans it, parses it into records, transforms coordinates, and groups them by `RefNo` (Component ID).
+
+**Key Functionality:**
+1.  **Robust Parsing (`parseCSV`)**:
+    ```javascript
+    // Splits by any line ending sequence to handle cross-platform files
+    const lines = content.split(/\r\n|\n|\r/).filter(l => l.trim().length > 0);
+    // Handles quoted fields containing commas
+    // ... custom tokenizer logic ...
+    ```
+2.  **Coordinate Transformation**:
+    Maps CSV coordinates (`East`, `North`, `Up`) to PCF Standard (`North`, `-East`, `Up`):
+    ```javascript
+    const pcf_x = y_csv;      // North
+    const pcf_y = -1 * x_csv; // -East
+    const pcf_z = z_csv;      // Up
+    ```
+3.  **Grouping**:
+    Aggregates individual point rows into logical "Component Groups" (e.g., a TEE with 4 connection points) based on `RefNo` change.
+
+### `Pfc_PcfGenerator.js` (Geometry Engine)
+**Role:** Iterates through component groups, establishes connectivity, handles tolerances, and emits PCF-formatted strings.
+
+**Key Functionality:**
+1.  **State Tracking**:
+    Maintains `lastEndpoint` and `lastBore` to track the "tail" of the pipeline as it processes sequential groups.
+
+2.  **Implicit Connectivity (`processGroup`)**:
+    Calculates the 3D distance between the current component's Start Point and the previous component's End Point.
+    *   **Case 1: Jump (`BRAN`):** If component is a Branch/Start marker, `lastEndpoint` is reset. No connection.
+    *   **Case 2: Snap (< 6mm):** If gap is ≤ 6.0mm, the current start point is **moved** (snapped) to `lastEndpoint`.
+        *   *Reasoning:* Fixes floating point drift and ensures `0.00mm` gap for ISOGEN connectivity.
+    *   **Case 3: Implicit Pipe (> 6mm):** If gap > 6.0mm, `generatePipe()` is called to bridge the gap.
+        *   *Reasoning:* The CSV defines nodes; the pipe between them is implied by physics.
+
+3.  **Segmentation (`generatePipe`)**:
+    Splits long implied pipes into standard cut lengths (max `13,100mm`).
+    ```javascript
+    if (dist > this.maxPipeLength) {
+        const segments = Math.ceil(dist / this.maxPipeLength);
+        // Vector math to calculate intermediate points
+        // Emits multiple PIPE components
+    }
+    ```
+    *   *Reasoning:* Matches expected fabrication output (pipes cannot be infinite length) and fixes visual issues in `30-B7410250`.
+
+4.  **Component Generation**:
+    Maps CSV `Type` (e.g., `ANCI`, `FLAN`, `ELBO`) to PCF keywords (`SUPPORT`, `PIPE-FIXED`, `BEND`).
+    *   *Improvement:* `ANCI` (Support) logic ensures it emits a coordinate but updates the `lastEndpoint` correctly so the line continues *through* the support.
+
+## 4. Verification
 - **`Sys-1`:** Verified correct connectivity: `FLAN -> PIPE -> ANCI -> PIPE -> TEE`. No missing segments.
 - **`30-B7410250`:** Verified correct segmentation of the 50m run. Verified CSV parsing.
 
-## 4. Conclusion
+## 5. Conclusion
 The updated "Core Engine" in `src/PCF_tool` now surpasses the reference app by providing robust, sequential connectivity with intelligent snapping and segmentation, avoiding the pitfalls of "Strict" (missing pipes) and "Multipass" (invalid connections).
