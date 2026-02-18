@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Expand-Archive -Path \"C:\\\\Code\\\\PCF-Converter-App_C1\\\\BROKENPCFS.zip\" -DestinationPath \"C:\\\\Code\\\\PCF-Converter-App_C1\\\\BROKENPCFS\"\" -Force)",
+      "Bash(powershell.exe -Command \"Expand-Archive -Path ''C:\\\\Code\\\\PCF-Converter-App_C1\\\\BROKENPCFS.zip'' -DestinationPath ''C:\\\\Code\\\\PCF-Converter-App_C1\\\\BROKENPCFS\\\\'' -Force\")",
+      "Bash(powershell.exe:*)",
+      "Bash(dir:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(npm start)",
+      "Bash(timeout:*)",
+      "Bash(curl:*)",
+      "Bash(node --check:*)",
+      "Bash(node --version:*)",
+      "Bash(Get-Content \"C:\\\\Code\\\\PCF-Converter-App_C1\\\\Docs\\\\export sys-1.csv\")",
+      "Bash(Select-Object -First 50)",
+      "Bash(powershell -Command:*)"
+    ]
+  }
+}

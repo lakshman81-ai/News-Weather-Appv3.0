@@ -1,0 +1,215 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - heading "PCF CONVERTER" [level=1] [ref=e5]
+      - generic [ref=e6]: v1.1 (Integrated)
+    - button "↺ Reset" [ref=e8] [cursor=pointer]
+  - tablist [ref=e9]:
+    - tab "Input" [ref=e10] [cursor=pointer]:
+      - generic [ref=e12]: Input
+    - tab "Enhanced Mapping" [ref=e13] [cursor=pointer]:
+      - generic [ref=e15]: Enhanced Mapping
+    - tab "PCF in Table Form" [active] [ref=e16] [cursor=pointer]:
+      - generic [ref=e18]: PCF in Table Form
+    - tab "Validate" [ref=e19] [cursor=pointer]:
+      - generic [ref=e21]: Validate
+    - tab "Sequence" [ref=e22] [cursor=pointer]:
+      - generic [ref=e24]: Sequence
+    - tab "Preview" [ref=e25] [cursor=pointer]:
+      - generic [ref=e27]: Preview
+    - tab "Output" [ref=e28] [cursor=pointer]:
+      - generic [ref=e30]: Output
+    - tab "3D Viewer" [ref=e31] [cursor=pointer]:
+      - generic [ref=e33]: 3D Viewer
+    - tab "Master Data" [ref=e34] [cursor=pointer]:
+      - generic [ref=e36]: Master Data
+    - tab "Config" [ref=e37] [cursor=pointer]:
+      - generic [ref=e39]: Config
+  - main [ref=e40]:
+    - tabpanel [ref=e41]:
+      - generic [ref=e42]:
+        - heading "PCF IN TABLE FORM" [level=2] [ref=e43]
+        - generic [ref=e44]:
+          - generic [ref=e45]: "Tolerance (mm):"
+          - spinbutton "Tolerance (mm):" [ref=e46]: "6"
+          - button "↺ Refresh" [ref=e47] [cursor=pointer]
+          - button "⟳ Regenerate PCF" [ref=e48] [cursor=pointer]
+          - button "📥 Export Phase 1 PCF" [ref=e49] [cursor=pointer]
+          - button "↓ Export CSV" [ref=e50] [cursor=pointer]
+          - button "Next →" [disabled] [ref=e51]
+      - table [ref=e54]:
+        - rowgroup [ref=e55]:
+          - row "Component Start Coords DN (Bore) Line No. (Derived) Axis 1 Len 1 Axis 2 Len 2 Axis 3 Len 3 P1 (ATTR1) T1 (ATTR2) Ins Thk (ATTR5) Ins Den (ATTR6) Density (ATTR9) HP (ATTR10) Piping Class Rigid Type Weight (ATTR8) Material (ATTR3) Wall Thk (ATTR4) Support Name" [ref=e56]:
+            - columnheader "Component" [ref=e57]
+            - columnheader "Start Coords" [ref=e58]
+            - columnheader "DN (Bore)" [ref=e59]
+            - columnheader "Line No. (Derived)" [ref=e60]
+            - columnheader "Axis 1" [ref=e61]
+            - columnheader "Len 1" [ref=e62]
+            - columnheader "Axis 2" [ref=e63]
+            - columnheader "Len 2" [ref=e64]
+            - columnheader "Axis 3" [ref=e65]
+            - columnheader "Len 3" [ref=e66]
+            - columnheader "P1 (ATTR1)" [ref=e67]
+            - columnheader "T1 (ATTR2)" [ref=e68]
+            - columnheader "Ins Thk (ATTR5)" [ref=e69]
+            - columnheader "Ins Den (ATTR6)" [ref=e70]
+            - columnheader "Density (ATTR9)" [ref=e71]
+            - columnheader "HP (ATTR10)" [ref=e72]
+            - columnheader "Piping Class" [ref=e73]
+            - columnheader "Rigid Type" [ref=e74]
+            - columnheader "Weight (ATTR8)" [ref=e75]
+            - columnheader "Material (ATTR3)" [ref=e76]
+            - columnheader "Wall Thk (ATTR4)" [ref=e77]
+            - columnheader "Support Name" [ref=e78]
+        - rowgroup [ref=e79]:
+          - row "PIPE 0.0, 100.0, 0.0 400 NORTH 800.0 0.0 0.0" [ref=e80]:
+            - cell "PIPE" [ref=e81]
+            - cell "0.0, 100.0, 0.0" [ref=e82]
+            - cell "400" [ref=e83]
+            - cell [ref=e84]
+            - cell "NORTH" [ref=e85]
+            - cell "800.0" [ref=e86]
+            - cell [ref=e87]
+            - cell "0.0" [ref=e88]
+            - cell [ref=e89]
+            - cell "0.0" [ref=e90]
+            - cell [ref=e91]
+            - cell [ref=e92]
+            - cell [ref=e93]
+            - cell [ref=e94]
+            - cell [ref=e95]
+            - cell [ref=e96]
+            - cell [ref=e97]
+            - cell [ref=e98]
+            - cell [ref=e99]
+            - cell [ref=e100]
+            - cell [ref=e101]
+            - cell [ref=e102]
+          - row "PIPE 0.0, 900.0, 0.0 400 NORTH 200.0 0.0 0.0" [ref=e103]:
+            - cell "PIPE" [ref=e104]
+            - cell "0.0, 900.0, 0.0" [ref=e105]
+            - cell "400" [ref=e106]
+            - cell [ref=e107]
+            - cell "NORTH" [ref=e108]
+            - cell "200.0" [ref=e109]
+            - cell [ref=e110]
+            - cell "0.0" [ref=e111]
+            - cell [ref=e112]
+            - cell "0.0" [ref=e113]
+            - cell [ref=e114]
+            - cell [ref=e115]
+            - cell [ref=e116]
+            - cell [ref=e117]
+            - cell [ref=e118]
+            - cell [ref=e119]
+            - cell [ref=e120]
+            - cell [ref=e121]
+            - cell [ref=e122]
+            - cell [ref=e123]
+            - cell [ref=e124]
+            - cell [ref=e125]
+          - row "PIPE 0.0, 1100.0, 0.0 400 NORTH 600.0 0.0 0.0" [ref=e126]:
+            - cell "PIPE" [ref=e127]
+            - cell "0.0, 1100.0, 0.0" [ref=e128]
+            - cell "400" [ref=e129]
+            - cell [ref=e130]
+            - cell "NORTH" [ref=e131]
+            - cell "600.0" [ref=e132]
+            - cell [ref=e133]
+            - cell "0.0" [ref=e134]
+            - cell [ref=e135]
+            - cell "0.0" [ref=e136]
+            - cell [ref=e137]
+            - cell [ref=e138]
+            - cell [ref=e139]
+            - cell [ref=e140]
+            - cell [ref=e141]
+            - cell [ref=e142]
+            - cell [ref=e143]
+            - cell [ref=e144]
+            - cell [ref=e145]
+            - cell [ref=e146]
+            - cell [ref=e147]
+            - cell [ref=e148]
+          - row "PIPE 0.0, 1700.0, 0.0 400 NORTH 600.0 0.0 0.0" [ref=e149]:
+            - cell "PIPE" [ref=e150]
+            - cell "0.0, 1700.0, 0.0" [ref=e151]
+            - cell "400" [ref=e152]
+            - cell [ref=e153]
+            - cell "NORTH" [ref=e154]
+            - cell "600.0" [ref=e155]
+            - cell [ref=e156]
+            - cell "0.0" [ref=e157]
+            - cell [ref=e158]
+            - cell "0.0" [ref=e159]
+            - cell [ref=e160]
+            - cell [ref=e161]
+            - cell [ref=e162]
+            - cell [ref=e163]
+            - cell [ref=e164]
+            - cell [ref=e165]
+            - cell [ref=e166]
+            - cell [ref=e167]
+            - cell [ref=e168]
+            - cell [ref=e169]
+            - cell [ref=e170]
+            - cell [ref=e171]
+          - row "PIPE 0.0, 1100.0, 0.0 400 NORTH 600.0 0.0 0.0" [ref=e172]:
+            - cell "PIPE" [ref=e173]
+            - cell "0.0, 1100.0, 0.0" [ref=e174]
+            - cell "400" [ref=e175]
+            - cell [ref=e176]
+            - cell "NORTH" [ref=e177]
+            - cell "600.0" [ref=e178]
+            - cell [ref=e179]
+            - cell "0.0" [ref=e180]
+            - cell [ref=e181]
+            - cell "0.0" [ref=e182]
+            - cell [ref=e183]
+            - cell [ref=e184]
+            - cell [ref=e185]
+            - cell [ref=e186]
+            - cell [ref=e187]
+            - cell [ref=e188]
+            - cell [ref=e189]
+            - cell [ref=e190]
+            - cell [ref=e191]
+            - cell [ref=e192]
+            - cell [ref=e193]
+            - cell [ref=e194]
+          - row "SUPPORT 0.0, 1100.0, 0.0 0 0.0 0.0 0.0 VG100" [ref=e195]:
+            - cell "SUPPORT" [ref=e196]
+            - cell "0.0, 1100.0, 0.0" [ref=e197]
+            - cell "0" [ref=e198]
+            - cell [ref=e199]
+            - cell [ref=e200]
+            - cell "0.0" [ref=e201]
+            - cell [ref=e202]
+            - cell "0.0" [ref=e203]
+            - cell [ref=e204]
+            - cell "0.0" [ref=e205]
+            - cell [ref=e206]
+            - cell [ref=e207]
+            - cell [ref=e208]
+            - cell [ref=e209]
+            - cell [ref=e210]
+            - cell [ref=e211]
+            - cell [ref=e212]
+            - cell [ref=e213]
+            - cell [ref=e214]
+            - cell [ref=e215]
+            - cell [ref=e216]
+            - cell "VG100" [ref=e217]
+      - generic [ref=e218]:
+        - generic [ref=e219]:
+          - generic [ref=e220]: Mapping Diagnostic Log
+          - button "Clear" [ref=e221] [cursor=pointer]
+        - generic [ref=e223]: "[Component #2: PIPE] ✅ DN extracted: 400 from comp.bore ❌ No linelist match for Line No: \"N/A\" ❌ No RigidType match for DN=400, Len=800.0mm ❌ No Material match for DN=400, Class=\"\" (tried all 3 levels) [Component #4: PIPE] ✅ DN extracted: 400 from comp.bore ❌ No linelist match for Line No: \"N/A\" ❌ No RigidType match for DN=400, Len=200.0mm ❌ No Material match for DN=400, Class=\"\" (tried all 3 levels) [Component #6: PIPE] ✅ DN extracted: 400 from comp.bore ❌ No linelist match for Line No: \"N/A\" ❌ No RigidType match for DN=400, Len=600.0mm ❌ No Material match for DN=400, Class=\"\" (tried all 3 levels) [Component #8: PIPE] ✅ DN extracted: 400 from comp.bore ❌ No linelist match for Line No: \"N/A\" ❌ No RigidType match for DN=400, Len=600.0mm ❌ No Material match for DN=400, Class=\"\" (tried all 3 levels) [Component #10: PIPE] ✅ DN extracted: 400 from comp.bore ❌ No linelist match for Line No: \"N/A\" ❌ No RigidType match for DN=400, Len=600.0mm ❌ No Material match for DN=400, Class=\"\" (tried all 3 levels) [Component #12: SUPPORT] ✅ DN extracted: 0 from comp.bore ❌ No linelist match for Line No: \"N/A\" ❌ No RigidType match for DN=0, Len=0.0mm ❌ No Material match for DN=0, Class=\"\" (tried all 3 levels) ═══════════════════════════════════════ MAPPING SUMMARY ═══════════════════════════════════════ Total Components: 6 Linelist Matches: 0 (0%) RigidType Matches: 0 (0%) Material Matches: 0 (0%) Warnings: 0 Errors: 18 ═══════════════════════════════════════"
+  - contentinfo [ref=e224]:
+    - generic [ref=e227]: Complete — 11 rows loaded
+    - generic [ref=e228]: PCF Converter v1.0 · Browser-based · No data leaves your machine
+```
